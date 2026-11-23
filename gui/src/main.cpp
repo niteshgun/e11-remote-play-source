@@ -97,7 +97,7 @@ int real_main(int argc, char *argv[])
 		QGuiApplication::setDesktopFileName(qEnvironmentVariable("FLATPAK_ID"));
 	else
 #endif
-		QGuiApplication::setDesktopFileName("chiaki-ng");
+		QGuiApplication::setDesktopFileName("e11remoteplay");
 
 	qputenv("QTWEBENGINE_CHROMIUM_FLAGS", "--disable-gpu");
 #if defined(Q_OS_WIN)
@@ -125,11 +125,11 @@ int real_main(int argc, char *argv[])
 	ChiakiErrorCode err = chiaki_lib_init();
 	if(err != CHIAKI_ERR_SUCCESS)
 	{
-		fprintf(stderr, "Chiaki lib init failed: %s\n", chiaki_error_string(err));
+		fprintf(stderr, "e11 Remote Play init failed: %s\n", chiaki_error_string(err));
 		return 1;
 	}
 
-    SDL_SetHint(SDL_HINT_APP_NAME, "chiaki-ng");
+    SDL_SetHint(SDL_HINT_APP_NAME, "e11 Remote Play");
 
 	if(SDL_Init(SDL_INIT_AUDIO) < 0)
 	{

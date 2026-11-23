@@ -3207,8 +3207,8 @@ DialogView {
                     wrapMode: Text.Wrap
                     text: "<h1>e11: Remote Play</h1> by e11, version %1
                         <p>Remote play client for PlayStation®4 and PlayStation®5. Not affiliated with or endorsed by Sony Interactive Entertainment. PlayStation® and PlayStation®5 are trademarks of Sony Group Corporation.</p>
-                        <h2>Based on chiaki-ng</h2> by Street Pea, a fork of Chiaki by Florian Markl
-                        <p>Source code: https://github.com/streetpea/chiaki-ng</p>
+                        <h3>Open-source licences</h3>
+                        <p>Built on open-source remote play code (chiaki-ng by Street Pea; Chiaki by Florian Markl), used under the AGPLv3.</p>
 
                         <p>This program is free software: you can redistribute it and/or modify
                         it under the terms of the GNU Affero General Public License version 3

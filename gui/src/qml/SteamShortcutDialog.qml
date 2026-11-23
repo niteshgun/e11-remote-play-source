@@ -66,7 +66,7 @@ DialogView {
             C.TextField {
                 id: name
                 Layout.preferredWidth: 400
-                text: Chiaki.settings.currentProfile ? qsTr("chiaki-ng ") + Chiaki.settings.currentProfile: qsTr("chiaki-ng")
+                text: Chiaki.settings.currentProfile ? qsTr("e11 Remote Play ") + Chiaki.settings.currentProfile: qsTr("e11 Remote Play")
                 firstInFocusChain: true
             }
 

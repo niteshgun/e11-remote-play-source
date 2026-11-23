@@ -567,7 +567,7 @@ StreamSession::StreamSession(const StreamSessionConnectInfo &connect_info, QObje
 	}
 	err = chiaki_session_init(&session, &chiaki_connect_info, GetChiakiLog());
 	if(err != CHIAKI_ERR_SUCCESS)
-		throw ChiakiException("Chiaki Session Init failed: " + QString::fromLocal8Bit(chiaki_error_string(err)));
+		throw ChiakiException("Remote Play session init failed: " + QString::fromLocal8Bit(chiaki_error_string(err)));
 	ChiakiCtrlDisplaySink display_sink;
 	display_sink.user = this;
 	display_sink.cantdisplay_cb = CantDisplayCb;
@@ -842,7 +842,7 @@ void StreamSession::Start()
 	ChiakiErrorCode err = chiaki_session_start(&session);
 	if(err != CHIAKI_ERR_SUCCESS)
 	{
-		throw ChiakiException("Chiaki Session Start failed");
+		throw ChiakiException("Remote Play session start failed");
 	}
 	session_started = true;
 }

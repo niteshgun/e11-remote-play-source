@@ -5138,7 +5138,7 @@ void QmlMainWindow::init(Settings *settings, bool exit_app_on_stream_exit)
             // The last launch closed before Vulkan showed a frame, which is how a crash inside the
             // Vulkan driver or a third-party Vulkan layer looks; keep OpenGL until switched back
             settings->SetRenderBackend(RenderBackend::OpenGL);
-            fallbackToOpenGL(tr("chiaki-ng closed while starting Vulkan last time, so it now uses OpenGL. "
+            fallbackToOpenGL(tr("e11 Remote Play closed while starting Vulkan last time, so it now uses OpenGL. "
                                 "You can switch back under Settings > Video > Renderer Backend."));
             goto renderer_backend_ready;
         }
@@ -6208,7 +6208,7 @@ void QmlMainWindow::createSwapchain()
             if (surface_renderable && failures >= 60 && failure_duration_us >= 3000000) {
                 handleVulkanRendererFallback(
                     tr("Vulkan renderer stalled"),
-                    tr("The Vulkan surface could not recover. Chiaki-ng will relaunch with OpenGL for this run only."),
+                    tr("The Vulkan surface could not recover. e11 Remote Play will relaunch with OpenGL for this run only."),
                     tr("Vulkan surface creation failed repeatedly while the window was visible. OpenGL is being used for this launch only."));
             } else {
                 swapchain_recreate_pending.storeRelease(1);
@@ -6606,7 +6606,7 @@ void QmlMainWindow::handleVulkanDeviceLost(const QString &reason)
 {
     handleVulkanRendererFallback(
         tr("Vulkan device lost"),
-        tr("The Vulkan renderer stopped responding. Chiaki-ng will relaunch with OpenGL for this run only.\n\nReason: %1").arg(reason),
+        tr("The Vulkan renderer stopped responding. e11 Remote Play will relaunch with OpenGL for this run only.\n\nReason: %1").arg(reason),
         tr("Vulkan device was lost. OpenGL is being used for this launch only. Reason: %1").arg(reason));
 }
 
@@ -7228,7 +7228,7 @@ void QmlMainWindow::render()
             if (surface_renderable && failures >= 60 && failure_duration_us >= 3000000) {
                 handleVulkanRendererFallback(
                     tr("Vulkan renderer stalled"),
-                    tr("The Vulkan swapchain could not recover. Chiaki-ng will relaunch with OpenGL for this run only."),
+                    tr("The Vulkan swapchain could not recover. e11 Remote Play will relaunch with OpenGL for this run only."),
                     tr("Vulkan swapchain failed repeatedly while the window was visible. OpenGL is being used for this launch only."));
             } else {
                 swapchain_recreate_pending.storeRelease(1);

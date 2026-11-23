@@ -60,7 +60,7 @@ set(SOURCE_FILES
 set(RESOURCE_FILES "")
 
 if(APPLE)
-	list(APPEND RESOURCE_FILES "chiaking.icns")
+	list(APPEND RESOURCE_FILES "e11remoteplay.icns")
 elseif(WIN32)
 	configure_file(
 		${CMAKE_CURRENT_SOURCE_DIR}/chiaking.rc.in
@@ -158,7 +158,8 @@ set_target_properties(chiaki PROPERTIES
 		MACOSX_BUNDLE_BUNDLE_VERSION ${CHIAKI_VERSION}
 		MACOSX_BUNDLE_COPYRIGHT "e11. Based on chiaki-ng (Street Pea) and Chiaki (Florian Markl). AGPLv3."
 		MACOSX_BUNDLE_GUI_IDENTIFIER "com.e11.remoteplay"
-		MACOSX_BUNDLE_ICON_FILE chiaking.icns
+		MACOSX_BUNDLE_ICON_FILE e11remoteplay.icns
+		OUTPUT_NAME "e11remoteplay"
 		RESOURCE "${RESOURCE_FILES}")
 
 install(TARGETS chiaki
