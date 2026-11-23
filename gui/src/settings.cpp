@@ -1000,6 +1000,15 @@ void Settings::SetMouseTouchEnabled(bool enabled)
 	settings.setValue("settings/mouse_touch_enabled", enabled);
 }
 
+bool Settings::GetNeuralUpscale() const
+{
+	return settings.value("settings/neural_upscale", true).toBool();
+}
+void Settings::SetNeuralUpscale(bool enabled)
+{
+	settings.setValue("settings/neural_upscale", enabled);
+}
+
 bool Settings::GetShowAspectControl() const
 {
 	return settings.value("settings/show_aspect_control", true).toBool();

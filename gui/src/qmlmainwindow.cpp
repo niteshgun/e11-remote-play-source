@@ -6,6 +6,7 @@
 #include "streamsession.h"
 #ifdef Q_OS_MACOS
 #include "macMouseAim.h"
+#include "macNeuralUpscale.h"
 #endif
 #include <QCursor>
 #include <QSysInfo>
@@ -2772,6 +2773,31 @@ void QmlMainWindow::setColorAdjust(float brightness, float contrast, float satur
     requestOverlayUpdate();
 }
 
+bool QmlMainWindow::neuralUpscaleAvailable() const
+{
+#ifdef Q_OS_MACOS
+    return MacNeuralUpscale::Available();
+#else
+    return false;
+#endif
+}
+
+QString QmlMainWindow::neuralUpscaleStatus() const
+{
+#ifdef Q_OS_MACOS
+    if (!MacNeuralUpscale::Available())
+        return tr("Needs macOS 26 or later on Apple silicon");
+    if (!MacNeuralUpscale::Enabled())
+        return tr("Off");
+    if (MacNeuralUpscale::Active())
+        return tr("On: x%1, %2 ms/frame").arg(MacNeuralUpscale::ScaleFactor(), 0, 'f', 1)
+                                          .arg(MacNeuralUpscale::LastProcessMs(), 0, 'f', 1);
+    return tr("Waiting for video (or fell back to GPU)");
+#else
+    return tr("Mac only");
+#endif
+}
+
 QString QmlMainWindow::chipName() const
 {
 #ifdef Q_OS_MACOS
@@ -5230,6 +5256,10 @@ renderer_backend_ready:
             setCursor(Qt::ArrowCursor);
         }
         session = s;
+#ifdef Q_OS_MACOS
+        MacNeuralUpscale::SetEnabled(this->settings && this->settings->GetNeuralUpscale());
+        MacNeuralUpscale::Reset();
+#endif
         if (this->settings && this->settings->GetRetinaVivid())
             setColorAdjust(0.0f, 1.05f, 1.15f, 0.0f);
         else

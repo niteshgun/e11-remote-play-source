@@ -149,6 +149,8 @@ public:
     // e11 quick menu
     Q_INVOKABLE void setColorAdjust(float brightness, float contrast, float saturation, float temperature);
     Q_INVOKABLE QString chipName() const;
+    Q_INVOKABLE bool neuralUpscaleAvailable() const;
+    Q_INVOKABLE QString neuralUpscaleStatus() const;
     Q_INVOKABLE void grabInput();
     Q_INVOKABLE void releaseInput();
     Q_INVOKABLE void requestOverlayUpdate();

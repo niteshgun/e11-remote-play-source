@@ -1,4 +1,7 @@
 #include "qmlsettings.h"
+#ifdef Q_OS_MACOS
+#include "macNeuralUpscale.h"
+#endif
 #include "sessionlog.h"
 
 #include <QSet>
@@ -809,6 +812,20 @@ void QmlSettings::setMouseTouchEnabled(bool enabled)
     emit mouseTouchEnabledChanged();
 }
 
+bool QmlSettings::neuralUpscale() const
+{
+    return settings->GetNeuralUpscale();
+}
+
+void QmlSettings::setNeuralUpscale(bool enabled)
+{
+    settings->SetNeuralUpscale(enabled);
+#ifdef Q_OS_MACOS
+    MacNeuralUpscale::SetEnabled(enabled);
+#endif
+    emit neuralUpscaleChanged();
+}
+
 bool QmlSettings::showAspectControl() const
 {
     return settings->GetShowAspectControl();
@@ -828,6 +845,7 @@ bool QmlSettings::retinaVivid() const
 void QmlSettings::setRetinaVivid(bool enabled)
 {
     settings->SetRetinaVivid(enabled);
+    emit neuralUpscaleChanged();
     emit showAspectControlChanged();
     emit retinaVividChanged();
 }

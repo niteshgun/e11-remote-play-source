@@ -443,6 +443,9 @@ class Settings : public QObject
 		bool GetMouseTouchEnabled() const;
 		void SetMouseTouchEnabled(bool enabled);
 
+		bool GetNeuralUpscale() const;
+		void SetNeuralUpscale(bool enabled);
+
 		bool GetShowAspectControl() const;
 		void SetShowAspectControl(bool show);
 

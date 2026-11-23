@@ -80,6 +80,8 @@ if(APPLE)
 		src/macMicPermission.m
 		include/macMouseAim.h
 		src/macMouseAim.mm
+		include/macNeuralUpscale.h
+		src/macNeuralUpscale.mm
 		include/macWakeSleep.h
 		src/macWakeSleep.cpp
 	)
@@ -141,7 +143,7 @@ if(NOT CHIAKI_ENABLE_FFMPEG_DECODER)
 	message(FATAL_ERROR "Chiaki GUI requires CHIAKI_ENABLE_FFMPEG_DECODER=ON")
 endif()
 if(APPLE)
-	target_link_libraries(chiaki "-framework AVFoundation" "-framework IOKit" "-framework AppKit" "-framework ApplicationServices")
+	target_link_libraries(chiaki "-framework AVFoundation" "-framework IOKit" "-framework AppKit" "-framework ApplicationServices" "-framework VideoToolbox" "-framework CoreVideo" "-framework CoreMedia")
 endif()
 
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fanalyzer")

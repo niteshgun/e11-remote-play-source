@@ -1,4 +1,7 @@
 #include "qmlbackend.h"
+#ifdef Q_OS_MACOS
+#include "macNeuralUpscale.h"
+#endif
 #include "qmlsettings.h"
 #include "qmlmainwindow.h"
 #include "streamsession.h"
@@ -466,6 +469,17 @@ bool QmlBackend::prepareFrameForPresentation(ChiakiFfmpegFrame &frame, bool use_
         return frame_has_planes(frame.frame);
 
     const int format = frame.frame->format;
+#ifdef Q_OS_MACOS
+    // e11: Neural Engine super resolution (VideoToolbox low-latency scaler, macOS 26+).
+    // Falls back to the normal copy below if unavailable, disabled, too slow or on error.
+    if (format == AV_PIX_FMT_VIDEOTOOLBOX && MacNeuralUpscale::Enabled()) {
+        if (AVFrame *upscaled = MacNeuralUpscale::Process(frame.frame)) {
+            av_frame_free(&frame.frame);
+            frame.frame = upscaled;
+            return frame_has_planes(frame.frame);
+        }
+    }
+#endif
     {
         QMutexLocker locker(&hw_transfer_state_mutex);
         if (!logged_hw_transfer_formats.contains(format)) {

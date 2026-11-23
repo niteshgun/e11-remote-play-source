@@ -434,6 +434,25 @@ Window {
                 color: Qt.rgba(1, 1, 1, 0.6)
             }
             Toggle {
+                text: qsTr("Neural Engine upscaling (Apple ML)")
+                enabled: Chiaki.window.neuralUpscaleAvailable()
+                checked: Chiaki.settings.neuralUpscale && enabled
+                onToggled: Chiaki.settings.neuralUpscale = checked
+            }
+            Label {
+                id: neuralStatus
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                font.pixelSize: 11
+                color: Qt.rgba(1, 1, 1, 0.55)
+                text: Chiaki.window.neuralUpscaleStatus()
+                Timer {
+                    interval: 1000; repeat: true
+                    running: quickWindow.expanded && quickWindow.visible
+                    onTriggered: neuralStatus.text = Chiaki.window.neuralUpscaleStatus()
+                }
+            }
+            Toggle {
                 text: qsTr("V-Sync (no tearing, slightly more latency)")
                 checked: Chiaki.settings.vSyncEnabled
                 onToggled: Chiaki.settings.vSyncEnabled = checked

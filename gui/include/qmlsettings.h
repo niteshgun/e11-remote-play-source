@@ -81,6 +81,7 @@ class QmlSettings : public QObject
     Q_PROPERTY(QString psnAuthTokenExpiry READ psnAuthTokenExpiry WRITE setPsnAuthTokenExpiry NOTIFY psnAuthTokenExpiryChanged)
     Q_PROPERTY(QString psnAccountId READ psnAccountId WRITE setPsnAccountId NOTIFY psnAccountIdChanged)
     Q_PROPERTY(bool mouseTouchEnabled READ mouseTouchEnabled WRITE setMouseTouchEnabled NOTIFY mouseTouchEnabledChanged)
+    Q_PROPERTY(bool neuralUpscale READ neuralUpscale WRITE setNeuralUpscale NOTIFY neuralUpscaleChanged)
     Q_PROPERTY(bool showAspectControl READ showAspectControl WRITE setShowAspectControl NOTIFY showAspectControlChanged)
     Q_PROPERTY(bool retinaVivid READ retinaVivid WRITE setRetinaVivid NOTIFY retinaVividChanged)
     Q_PROPERTY(bool mouseAimEnabled READ mouseAimEnabled WRITE setMouseAimEnabled NOTIFY mouseAimEnabledChanged)
@@ -552,6 +553,8 @@ public:
     bool mouseTouchEnabled() const;
     void setMouseTouchEnabled(bool enabled);
 
+    bool neuralUpscale() const;
+    void setNeuralUpscale(bool enabled);
     bool showAspectControl() const;
     void setShowAspectControl(bool show);
     bool retinaVivid() const;
@@ -697,6 +700,7 @@ signals:
     void psnAuthTokenExpiryChanged();
     void psnAccountIdChanged();
     void mouseTouchEnabledChanged();
+    void neuralUpscaleChanged();
     void showAspectControlChanged();
     void retinaVividChanged();
     void mouseAimEnabledChanged();
