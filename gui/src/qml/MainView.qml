@@ -492,7 +492,7 @@ Pane {
                 Button {
                     text: qsTr("Bluetooth settings")
                     flat: true
-                    onClicked: Qt.openUrlExternally("x-apple.systempreferences:com.apple.BluetoothSettings")
+                    onClicked: Chiaki.window.openBluetoothSettings()
                 }
             }
             Repeater {
@@ -508,6 +508,30 @@ Pane {
                         text: "🎮  " + controllerCard.line(modelData) + qsTr("  ·  connected")
                     }
                 }
+            }
+            // One click (or Space) pulls the controller from the PS5 over to this Mac
+            RowLayout {
+                Layout.fillWidth: true
+                Button {
+                    id: toMacButton
+                    text: qsTr("🎮 Use controller on this Mac  (Space)")
+                    highlighted: true
+                    onClicked: switchStatus.text = Chiaki.window.controllerToMac()
+                }
+                Label {
+                    id: switchStatus
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: 11
+                    color: Qt.rgba(1, 1, 1, 0.7)
+                    text: qsTr("Switches the controller from the PS5 to this Mac. One-time setup: hold Circle + PS for 5 s, then connect it in Bluetooth settings.")
+                }
+            }
+            Shortcut {
+                sequence: "Space"
+                context: Qt.WindowShortcut
+                enabled: !Chiaki.session
+                onActivated: switchStatus.text = Chiaki.window.controllerToMac()
             }
             Label {
                 visible: controllerCard.psOnUsb

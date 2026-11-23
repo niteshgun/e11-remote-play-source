@@ -16,6 +16,8 @@
 	<string>6.0</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>${CMAKE_OSX_DEPLOYMENT_TARGET}</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>e11 Remote Play connects your game controller to this Mac.</string>
 	<key>CFBundleDisplayName</key>
 	<string>e11: Remote Play</string>
 	<key>CFBundleName</key>

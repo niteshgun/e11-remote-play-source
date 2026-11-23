@@ -7,6 +7,7 @@
 #ifdef Q_OS_MACOS
 #include "macMouseAim.h"
 #include "macNeuralUpscale.h"
+#include "macControllerSwitch.h"
 #endif
 #include <QCursor>
 #include <QDesktopServices>
@@ -2854,6 +2855,22 @@ void QmlMainWindow::aiPlayOpenFolder() const
 {
     QDir().mkpath(AIPlayRecorder::Instance().RootFolder());
     QDesktopServices::openUrl(QUrl::fromLocalFile(AIPlayRecorder::Instance().RootFolder()));
+}
+
+QString QmlMainWindow::controllerToMac()
+{
+#ifdef Q_OS_MACOS
+    return MacControllerSwitch::ConnectToMac();
+#else
+    return tr("Mac only");
+#endif
+}
+
+void QmlMainWindow::openBluetoothSettings()
+{
+#ifdef Q_OS_MACOS
+    MacControllerSwitch::OpenBluetoothSettings();
+#endif
 }
 
 QString QmlMainWindow::chipName() const

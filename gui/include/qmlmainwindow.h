@@ -155,6 +155,8 @@ public:
     Q_INVOKABLE QString chipName() const;
     // e11 AI Play
     Q_INVOKABLE int takeFrameCount() const { return e11TakeFrameCount(); }
+    Q_INVOKABLE QString controllerToMac();
+    Q_INVOKABLE void openBluetoothSettings();
     Q_INVOKABLE bool aiPlaySetRecording(bool on);
     Q_INVOKABLE bool aiPlayRecording() const;
     Q_INVOKABLE int aiPlayFramesRecorded() const;
