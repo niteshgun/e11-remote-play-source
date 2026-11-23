@@ -2873,6 +2873,28 @@ void QmlMainWindow::openBluetoothSettings()
 #endif
 }
 
+QVariantMap QmlMainWindow::smoothPlayStatus()
+{
+    QVariantMap m;
+#ifdef Q_OS_MACOS
+    m["bluetoothOn"] = MacControllerSwitch::BluetoothPowered();
+    m["airdropOn"] = MacControllerSwitch::AirDropOn() == 1;
+    m["handoffOn"] = MacControllerSwitch::HandoffOn() == 1;
+#else
+    m["bluetoothOn"] = false;
+    m["airdropOn"] = false;
+    m["handoffOn"] = false;
+#endif
+    return m;
+}
+
+void QmlMainWindow::openAirDropHandoffSettings()
+{
+#ifdef Q_OS_MACOS
+    MacControllerSwitch::OpenAirDropHandoffSettings();
+#endif
+}
+
 QString QmlMainWindow::chipName() const
 {
 #ifdef Q_OS_MACOS

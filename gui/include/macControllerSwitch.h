@@ -10,6 +10,12 @@ namespace MacControllerSwitch {
 	// Returns a short status message for the UI.
 	QString ConnectToMac();
 	void OpenBluetoothSettings();
+
+	// Smooth-play checks (read-only, no scanning). AirDrop/Handoff: 1 on, 0 off.
+	bool BluetoothPowered();
+	int AirDropOn();
+	int HandoffOn();
+	void OpenAirDropHandoffSettings();
 }
 
 #endif

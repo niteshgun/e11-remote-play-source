@@ -157,6 +157,8 @@ public:
     Q_INVOKABLE int takeFrameCount() const { return e11TakeFrameCount(); }
     Q_INVOKABLE QString controllerToMac();
     Q_INVOKABLE void openBluetoothSettings();
+    Q_INVOKABLE QVariantMap smoothPlayStatus();
+    Q_INVOKABLE void openAirDropHandoffSettings();
     Q_INVOKABLE bool aiPlaySetRecording(bool on);
     Q_INVOKABLE bool aiPlayRecording() const;
     Q_INVOKABLE int aiPlayFramesRecorded() const;

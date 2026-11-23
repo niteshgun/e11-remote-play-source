@@ -439,7 +439,18 @@ Pane {
     Rectangle {
         id: controllerCard
         property int tick: 0
-        Timer { interval: 1500; repeat: true; running: true; onTriggered: controllerCard.tick++ }
+        // Only poll on the main screen, never while streaming
+        Timer { interval: 2000; repeat: true; running: !Chiaki.session && consolePane.visible; triggeredOnStart: true
+                onTriggered: { controllerCard.tick++; controllerCard.smoothState = Chiaki.window.smoothPlayStatus(); } }
+        property var smoothState: ({ bluetoothOn: false, airdropOn: false, handoffOn: false })
+        readonly property bool anyWired: {
+            tick;
+            for (let i = 0; i < Chiaki.controllers.length; i++)
+                if (Chiaki.controllers[i].wired())
+                    return true;
+            return false;
+        }
+        readonly property bool smoothOk: anyWired && !smoothState.bluetoothOn && !smoothState.airdropOn && !smoothState.handoffOn
         function line(c) {
             tick;
             let parts = [c.friendlyName(), c.wired() ? qsTr("USB") : qsTr("Bluetooth")];
@@ -463,7 +474,7 @@ Pane {
             bottom: parent.bottom
             bottomMargin: 24
         }
-        width: Math.min(parent.width - 180, 560)
+        width: Math.min(parent.width - 120, 680)
         implicitHeight: cardCol.implicitHeight + 24
         height: implicitHeight
         radius: 14
@@ -533,6 +544,32 @@ Pane {
                 enabled: !Chiaki.session
                 onActivated: switchStatus.text = Chiaki.window.controllerToMac()
             }
+            // e11: Smooth play checklist. Bluetooth + AirDrop/Handoff share the Mac's Wi-Fi radio and cause lag spikes.
+            Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(1, 1, 1, 0.10) }
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+                Label {
+                    color: controllerCard.smoothOk ? "#5ad17a" : "#ffd9a8"
+                    font.pixelSize: 13
+                    font.bold: true
+                    text: controllerCard.smoothOk ? qsTr("✓ Smooth play ready") : qsTr("⚠ Smooth play")
+                }
+                Label { font.pixelSize: 12; color: controllerCard.anyWired ? "#5ad17a" : "#ffd9a8"
+                        text: (controllerCard.anyWired ? "✓" : "⚠") + qsTr(" USB-C") }
+                Label { font.pixelSize: 12; color: controllerCard.smoothState.bluetoothOn ? "#ffd9a8" : "#5ad17a"
+                        text: controllerCard.smoothState.bluetoothOn ? qsTr("⚠ Bluetooth") : qsTr("✓ Bluetooth off") }
+                Label { font.pixelSize: 12
+                        readonly property bool on: controllerCard.smoothState.airdropOn || controllerCard.smoothState.handoffOn
+                        color: on ? "#ffd9a8" : "#5ad17a"
+                        text: on ? qsTr("⚠ AirDrop/Handoff") : qsTr("✓ AirDrop/Handoff off") }
+                Item { Layout.fillWidth: true }
+                Button {
+                    text: controllerCard.smoothOk ? qsTr("Tips") : qsTr("Fix lag")
+                    flat: true
+                    onClicked: smoothPopup.open()
+                }
+            }
             Label {
                 visible: controllerCard.psOnUsb
                 Layout.fillWidth: true
@@ -541,6 +578,56 @@ Pane {
                 color: "#ffd9a8"
                 text: qsTr("Inputs doubled? Your PS5 may also be using this controller over Bluetooth. Fix once on the PS5: "
                          + "Settings → Accessories → Controller (General) → Communication Method → Use USB Cable.")
+            }
+        }
+
+        Popup {
+            id: smoothPopup
+            parent: Overlay.overlay
+            anchors.centerIn: parent
+            width: Math.min(parent ? parent.width - 80 : 640, 640)
+            modal: true
+            focus: true
+            padding: 22
+            background: Rectangle { radius: 16; color: Qt.rgba(0.08, 0.08, 0.10, 0.97); border.color: Qt.rgba(1, 1, 1, 0.15) }
+            contentItem: ColumnLayout {
+                spacing: 12
+                Label { text: qsTr("Smooth play on Mac"); color: "white"; font.pixelSize: 20; font.bold: true }
+                Label {
+                    Layout.fillWidth: true; wrapMode: Text.WordWrap; color: Qt.rgba(1, 1, 1, 0.75); font.pixelSize: 13
+                    text: qsTr("On a MacBook, Wi-Fi and Bluetooth share one radio. Anything else using it causes lag spikes and a jumpy controller.")
+                }
+                Repeater {
+                    model: [
+                        { ok: controllerCard.anyWired, t: qsTr("1. Plug the controller into the Mac with USB-C"), d: qsTr("Wired is instant and never jumps to the PS5."), b: "" },
+                        { ok: !controllerCard.smoothState.bluetoothOn, t: qsTr("2. Turn Bluetooth off while you play"), d: qsTr("Frees the radio for Wi-Fi. Your USB-C controller keeps working."), b: "bt" },
+                        { ok: !(controllerCard.smoothState.airdropOn || controllerCard.smoothState.handoffOn), t: qsTr("3. Turn off AirDrop and Handoff"), d: qsTr("AirDrop: No One. Handoff: off. They make Wi-Fi hop channels every few seconds, the classic Mac stutter."), b: "ah" },
+                        { ok: true, t: qsTr("4. Still lagging? Plug the PS5 into your router with ethernet"), d: qsTr("Then only the Mac is on Wi-Fi. Stay close to the router."), b: "" }
+                    ]
+                    delegate: RowLayout {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        spacing: 10
+                        Label { text: modelData.ok ? "✓" : "⚠"; color: modelData.ok ? "#5ad17a" : "#ffd9a8"; font.pixelSize: 18; Layout.alignment: Qt.AlignTop }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+                            Label { Layout.fillWidth: true; wrapMode: Text.WordWrap; text: modelData.t; color: "white"; font.pixelSize: 14; font.bold: true }
+                            Label { Layout.fillWidth: true; wrapMode: Text.WordWrap; text: modelData.d; color: Qt.rgba(1, 1, 1, 0.65); font.pixelSize: 12 }
+                        }
+                        Button {
+                            visible: modelData.b !== ""
+                            text: qsTr("Open")
+                            flat: true
+                            onClicked: modelData.b === "bt" ? Chiaki.window.openBluetoothSettings() : Chiaki.window.openAirDropHandoffSettings()
+                        }
+                    }
+                }
+                Label {
+                    Layout.fillWidth: true; wrapMode: Text.WordWrap; color: Qt.rgba(1, 1, 1, 0.5); font.pixelSize: 11
+                    text: qsTr("Game Mode turns on by itself in full screen and doubles Bluetooth polling. With Bluetooth off it doesn't matter.")
+                }
+                Button { text: qsTr("Got it"); highlighted: true; Layout.alignment: Qt.AlignRight; onClicked: smoothPopup.close() }
             }
         }
     }

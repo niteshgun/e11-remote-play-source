@@ -38,6 +38,53 @@ QString MacControllerSwitch::ConnectToMac()
 	}
 }
 
+bool MacControllerSwitch::BluetoothPowered()
+{
+	@autoreleasepool {
+		IOBluetoothHostController *hc = [IOBluetoothHostController defaultController];
+		return hc && hc.powerState == kBluetoothHCIPowerStateON;
+	}
+}
+
+int MacControllerSwitch::AirDropOn()
+{
+	CFPreferencesAppSynchronize(CFSTR("com.apple.sharingd"));
+	CFPropertyListRef v = CFPreferencesCopyAppValue(CFSTR("DiscoverableMode"), CFSTR("com.apple.sharingd"));
+	int on = 1; // macOS default is "Contacts Only"
+	if (v) {
+		if (CFGetTypeID(v) == CFStringGetTypeID() && CFStringCompare((CFStringRef)v, CFSTR("Off"), 0) == kCFCompareEqualTo)
+			on = 0;
+		CFRelease(v);
+	}
+	return on;
+}
+
+int MacControllerSwitch::HandoffOn()
+{
+	CFStringRef app = CFSTR("com.apple.coreservices.useractivityd");
+	CFPreferencesSynchronize(app, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost);
+	CFPropertyListRef v = CFPreferencesCopyValue(CFSTR("ActivityAdvertisingAllowed"), app, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost);
+	int on = 1; // default: Handoff allowed
+	if (v) {
+		if (CFGetTypeID(v) == CFBooleanGetTypeID())
+			on = CFBooleanGetValue((CFBooleanRef)v) ? 1 : 0;
+		else if (CFGetTypeID(v) == CFNumberGetTypeID()) {
+			int n = 1;
+			CFNumberGetValue((CFNumberRef)v, kCFNumberIntType, &n);
+			on = n ? 1 : 0;
+		}
+		CFRelease(v);
+	}
+	return on;
+}
+
+void MacControllerSwitch::OpenAirDropHandoffSettings()
+{
+	NSWorkspace *ws = [NSWorkspace sharedWorkspace];
+	if (![ws openURL:[NSURL URLWithString:@"x-apple.systempreferences:com.apple.AirDrop-Handoff-Settings.extension"]])
+		[ws openURL:[NSURL URLWithString:@"x-apple.systempreferences:com.apple.systempreferences.GeneralSettings"]];
+}
+
 void MacControllerSwitch::OpenBluetoothSettings()
 {
 	NSURL *url = [NSURL URLWithString:@"x-apple.systempreferences:com.apple.Bluetooth"];
