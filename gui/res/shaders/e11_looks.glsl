@@ -1,6 +1,21 @@
-// e11 "photo looks" pass for the stream: sharpen, clarity (local contrast), vibrance,
-// teal & orange split-toning, vignette and film grain. All strengths are dynamic so the
-// quick menu can change them live without recompiling. 0 = effect off.
+// e11 "photo looks" for the stream: bloom, light shafts, sharpen, clarity (local contrast),
+// vibrance, teal & orange split-toning, vignette and film grain. All strengths are dynamic so
+// the quick menu can change them live without recompiling. 0 = effect off.
+//
+// Lighting passes work at quarter resolution: bright-pass -> blur H -> blur V (bloom), and a
+// radial blur of the bright-pass toward the upper middle of the frame (light shafts).
+
+//!PARAM bloom
+//!TYPE DYNAMIC float
+//!MINIMUM 0.0
+//!MAXIMUM 2.0
+0.0
+
+//!PARAM rays
+//!TYPE DYNAMIC float
+//!MINIMUM 0.0
+//!MAXIMUM 2.0
+0.0
 
 //!PARAM sharpen
 //!TYPE DYNAMIC float
@@ -40,6 +55,86 @@
 
 //!HOOK OUTPUT
 //!BIND HOOKED
+//!SAVE E11BRIGHT
+//!WIDTH HOOKED.w 4 /
+//!HEIGHT HOOKED.h 4 /
+//!DESC e11 lighting: bright pass
+
+vec4 hook()
+{
+    // Average a 2x2 block of the full-res image, keep only the bright parts
+    vec2 q = HOOKED_pt * 1.0;
+    vec3 c = 0.25 * (HOOKED_tex(HOOKED_pos + vec2(-q.x, -q.y)).rgb + HOOKED_tex(HOOKED_pos + vec2(q.x, -q.y)).rgb
+                   + HOOKED_tex(HOOKED_pos + vec2(-q.x, q.y)).rgb + HOOKED_tex(HOOKED_pos + vec2(q.x, q.y)).rgb);
+    float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    float k = smoothstep(0.62, 0.98, l);
+    return vec4(c * k, 1.0);
+}
+
+//!HOOK OUTPUT
+//!BIND E11BRIGHT
+//!SAVE E11BLURH
+//!WIDTH E11BRIGHT.w
+//!HEIGHT E11BRIGHT.h
+//!DESC e11 lighting: bloom blur H
+
+vec4 hook()
+{
+    const float w[5] = float[5](0.2270, 0.1945, 0.1216, 0.0541, 0.0162);
+    vec3 acc = E11BRIGHT_tex(E11BRIGHT_pos).rgb * w[0];
+    for (int i = 1; i < 5; i++) {
+        vec2 o = vec2(float(i) * 2.0 * E11BRIGHT_pt.x, 0.0);
+        acc += (E11BRIGHT_tex(E11BRIGHT_pos + o).rgb + E11BRIGHT_tex(E11BRIGHT_pos - o).rgb) * w[i];
+    }
+    return vec4(acc, 1.0);
+}
+
+//!HOOK OUTPUT
+//!BIND E11BLURH
+//!SAVE E11BLOOM
+//!WIDTH E11BLURH.w
+//!HEIGHT E11BLURH.h
+//!DESC e11 lighting: bloom blur V
+
+vec4 hook()
+{
+    const float w[5] = float[5](0.2270, 0.1945, 0.1216, 0.0541, 0.0162);
+    vec3 acc = E11BLURH_tex(E11BLURH_pos).rgb * w[0];
+    for (int i = 1; i < 5; i++) {
+        vec2 o = vec2(0.0, float(i) * 2.0 * E11BLURH_pt.y);
+        acc += (E11BLURH_tex(E11BLURH_pos + o).rgb + E11BLURH_tex(E11BLURH_pos - o).rgb) * w[i];
+    }
+    return vec4(acc, 1.0);
+}
+
+//!HOOK OUTPUT
+//!BIND E11BRIGHT
+//!SAVE E11RAYS
+//!WIDTH E11BRIGHT.w
+//!HEIGHT E11BRIGHT.h
+//!DESC e11 lighting: light shafts
+
+vec4 hook()
+{
+    // March from this pixel toward the light origin (upper middle, where sun and sky usually are),
+    // gathering bright pixels with falloff: streaks of light radiate out from bright areas.
+    const vec2 origin = vec2(0.5, 0.30);
+    vec2 delta = (E11BRIGHT_pos - origin) * (1.0 / 28.0) * 0.85;
+    vec2 p = E11BRIGHT_pos;
+    float decay = 1.0;
+    vec3 acc = vec3(0.0);
+    for (int i = 0; i < 28; i++) {
+        p -= delta;
+        acc += E11BRIGHT_tex(p).rgb * decay;
+        decay *= 0.93;
+    }
+    return vec4(acc * (1.0 / 9.0), 1.0);
+}
+
+//!HOOK OUTPUT
+//!BIND HOOKED
+//!BIND E11BLOOM
+//!BIND E11RAYS
 //!DESC e11 photo looks
 
 vec4 hook()
@@ -47,6 +142,12 @@ vec4 hook()
     vec4 c = HOOKED_texOff(vec2(0.0));
     vec3 col = c.rgb;
     const vec3 W = vec3(0.2126, 0.7152, 0.0722);
+
+    // Bloom + light shafts: screen-blend the glow so highlights never clip harshly
+    if (bloom > 0.0 || rays > 0.0) {
+        vec3 glow = E11BLOOM_tex(HOOKED_pos).rgb * (bloom * 1.4) + E11RAYS_tex(HOOKED_pos).rgb * (rays * 0.8);
+        col = 1.0 - (1.0 - clamp(col, 0.0, 1.0)) * (1.0 - clamp(glow, 0.0, 1.0));
+    }
 
     // Sharpen: small-radius unsharp mask (crisper edges on a Retina screen)
     if (sharpen > 0.0) {

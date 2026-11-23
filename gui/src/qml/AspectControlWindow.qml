@@ -43,6 +43,8 @@ Window {
         property real customSplit: 0.0
         property real customVignette: 0.0
         property real customGrain: 0.0
+        property real customBloom: 0.0
+        property real customRays: 0.0
     }
 
     visible: shown
@@ -115,27 +117,27 @@ Window {
     // then GPU photo effects: sh sharpen, cl clarity, vb vibrance, sp teal/orange, vg vignette, gr grain
     readonly property var lookPresets: [
         { name: qsTr("Natural"), tip: qsTr("As the game was graded"),
-          b: 0.00, c: 1.00, s: 1.00, t: 0.00,  sh: 0.0, cl: 0.0, vb: 0.0, sp: 0.0, vg: 0.0, gr: 0.0 },
+          b: 0.00, c: 1.00, s: 1.00, t: 0.00,  sh: 0.0, cl: 0.0, vb: 0.0, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0, ry: 0 },
         { name: qsTr("Game"), tip: qsTr("Punchy and bright"),
-          b: 0.03, c: 1.10, s: 1.20, t: 0.03,  sh: 0.0, cl: 0.0, vb: 0.0, sp: 0.0, vg: 0.0, gr: 0.0 },
+          b: 0.03, c: 1.10, s: 1.20, t: 0.03,  sh: 0.0, cl: 0.0, vb: 0.0, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0, ry: 0 },
         { name: qsTr("Game+"), tip: qsTr("Game look, crisper and deeper"),
-          b: 0.03, c: 1.12, s: 1.22, t: 0.03,  sh: 0.35, cl: 0.35, vb: 0.2, sp: 0.0, vg: 0.0, gr: 0.0 },
+          b: 0.03, c: 1.12, s: 1.22, t: 0.03,  sh: 0.35, cl: 0.35, vb: 0.2, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0.25, ry: 0 },
         { name: qsTr("Vivid"), tip: qsTr("Rich P3 colour, sharper"),
-          b: 0.01, c: 1.14, s: 1.35, t: 0.00,  sh: 0.3, cl: 0.2, vb: 0.45, sp: 0.0, vg: 0.0, gr: 0.0 },
+          b: 0.01, c: 1.14, s: 1.35, t: 0.00,  sh: 0.3, cl: 0.2, vb: 0.45, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0.3, ry: 0 },
         { name: qsTr("DSLR"), tip: qsTr("Photo look: clarity, vibrance, light vignette"),
-          b: 0.00, c: 1.10, s: 1.08, t: -0.03, sh: 0.45, cl: 0.7, vb: 0.5, sp: 0.15, vg: 0.35, gr: 0.0 },
+          b: 0.00, c: 1.10, s: 1.08, t: -0.03, sh: 0.45, cl: 0.7, vb: 0.5, sp: 0.15, vg: 0.35, gr: 0.0, bl: 0.25, ry: 0 },
         { name: qsTr("HDR Pop"), tip: qsTr("Big local contrast, very crisp"),
-          b: -0.02, c: 1.18, s: 1.25, t: 0.00, sh: 0.55, cl: 1.0, vb: 0.4, sp: 0.0, vg: 0.15, gr: 0.0 },
+          b: -0.02, c: 1.18, s: 1.25, t: 0.00, sh: 0.55, cl: 1.0, vb: 0.4, sp: 0.0, vg: 0.15, gr: 0.0, bl: 0.45, ry: 0.2 },
         { name: qsTr("Cinema"), tip: qsTr("Warm film grade, vignette and grain"),
-          b: -0.03, c: 1.15, s: 0.92, t: -0.15, sh: 0.15, cl: 0.3, vb: 0.0, sp: 0.6, vg: 0.55, gr: 0.25 },
+          b: -0.03, c: 1.15, s: 0.92, t: -0.15, sh: 0.15, cl: 0.3, vb: 0.0, sp: 0.6, vg: 0.55, gr: 0.25, bl: 0.5, ry: 0.3 },
         { name: qsTr("Blockbuster"), tip: qsTr("Teal shadows, orange highlights"),
-          b: -0.01, c: 1.15, s: 1.05, t: -0.04, sh: 0.25, cl: 0.4, vb: 0.2, sp: 1.2, vg: 0.4, gr: 0.1 },
+          b: -0.01, c: 1.15, s: 1.05, t: -0.04, sh: 0.25, cl: 0.4, vb: 0.2, sp: 1.2, vg: 0.4, gr: 0.1, bl: 0.55, ry: 0.35 },
         { name: qsTr("Vice Sunset"), tip: qsTr("Warm, glowing, saturated"),
-          b: 0.02, c: 1.08, s: 1.30, t: -0.25, sh: 0.2, cl: 0.2, vb: 0.4, sp: 0.35, vg: 0.3, gr: 0.0 },
+          b: 0.02, c: 1.08, s: 1.30, t: -0.25, sh: 0.2, cl: 0.2, vb: 0.4, sp: 0.35, vg: 0.3, gr: 0.0, bl: 0.7, ry: 0.6 },
         { name: qsTr("Night"), tip: qsTr("Cool, moody, deep blacks"),
-          b: -0.04, c: 1.20, s: 1.05, t: 0.20,  sh: 0.25, cl: 0.4, vb: 0.25, sp: 0.0, vg: 0.5, gr: 0.1 },
+          b: -0.04, c: 1.20, s: 1.05, t: 0.20,  sh: 0.25, cl: 0.4, vb: 0.25, sp: 0.0, vg: 0.5, gr: 0.1, bl: 0.6, ry: 0.15 },
         { name: qsTr("Noir"), tip: qsTr("Black and white film"),
-          b: 0.00, c: 1.28, s: 0.00, t: 0.00,  sh: 0.3, cl: 0.6, vb: 0.0, sp: 0.0, vg: 0.6, gr: 0.35 }
+          b: 0.00, c: 1.28, s: 0.00, t: 0.00,  sh: 0.3, cl: 0.6, vb: 0.0, sp: 0.0, vg: 0.6, gr: 0.35, bl: 0.3, ry: 0.2 }
     ]
     readonly property int customLook: lookPresets.length
     readonly property int effectivePreset: prefs.colorPreset >= 0 ? prefs.colorPreset
@@ -144,11 +146,13 @@ Window {
     function applyLook(v) {
         Chiaki.window.setColorAdjust(v.b, v.c, v.s, v.t);
         Chiaki.window.setPhotoEffects(v.sh, v.cl, v.vb, v.sp, v.vg, v.gr);
+        Chiaki.window.setLightEffects(v.bl, v.ry);
     }
     function customLookValues() {
         return { b: prefs.customBrightness, c: prefs.customContrast, s: prefs.customSaturation, t: prefs.customWarmth,
                  sh: prefs.customSharpen, cl: prefs.customClarity, vb: prefs.customVibrance,
-                 sp: prefs.customSplit, vg: prefs.customVignette, gr: prefs.customGrain };
+                 sp: prefs.customSplit, vg: prefs.customVignette, gr: prefs.customGrain,
+                 bl: prefs.customBloom, ry: prefs.customRays };
     }
     function applyColor() {
         let p = effectivePreset;
@@ -162,6 +166,7 @@ Window {
             prefs.customSaturation = v.s; prefs.customWarmth = v.t;
             prefs.customSharpen = v.sh; prefs.customClarity = v.cl; prefs.customVibrance = v.vb;
             prefs.customSplit = v.sp; prefs.customVignette = v.vg; prefs.customGrain = v.gr;
+            prefs.customBloom = v.bl; prefs.customRays = v.ry;
         }
         prefs.colorPreset = p;
         applyColor();
@@ -539,6 +544,20 @@ Window {
                     valueText: (value >= 0 ? "+" : "") + Math.round(value * 100)
                     // libplacebo: negative temperature = warmer
                     onMoved: { prefs.customWarmth = -value; quickWindow.applyColor(); }
+                }
+                SliderRow {
+                    text: qsTr("Bloom")
+                    from: 0.0; to: 1.5; stepSize: 0.05
+                    value: prefs.customBloom
+                    valueText: Math.round(value * 100)
+                    onMoved: { prefs.customBloom = value; quickWindow.applyColor(); }
+                }
+                SliderRow {
+                    text: qsTr("Light rays")
+                    from: 0.0; to: 1.5; stepSize: 0.05
+                    value: prefs.customRays
+                    valueText: Math.round(value * 100)
+                    onMoved: { prefs.customRays = value; quickWindow.applyColor(); }
                 }
                 SliderRow {
                     text: qsTr("Sharpen")
