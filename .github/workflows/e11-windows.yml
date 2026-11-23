@@ -128,14 +128,30 @@ jobs:
           cmake --build build --config Release
           cmake --install build
 
-      - name: Setup shaderc
+      - name: Setup shaderc (from the Vulkan SDK)
+        # Google's shaderc download links (vs2019, and vs2022 -> install.tgz) now return
+        # "NoSuchKey", so take shaderc from the Vulkan SDK installed above instead.
         run: |
-          $ProgressPreference = 'SilentlyContinue'
-          $url = ((Invoke-WebRequest -UseBasicParsing -Uri "https://storage.googleapis.com/shaderc/badges/build_link_windows_vs2019_release.html").Content | Select-String -Pattern 'url=(.*)"').Matches.Groups[1].Value
-          Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile .\shaderc.zip
-          Expand-Archive -LiteralPath "shaderc.zip" -DestinationPath "."
-          cp "./install/*" "./${{ env.dep_folder }}" -Force -Recurse
-          rm "./install" -r -force
+          $sdk = "${{ env.VULKAN_SDK }}"
+          $dep = "${{ github.workspace }}\${{ env.dep_folder }}"
+          New-Item -ItemType Directory -Force "$dep\bin","$dep\lib\pkgconfig","$dep\include" | Out-Null
+          $dll = Get-ChildItem -Path $sdk -Recurse -Filter shaderc_shared.dll -ErrorAction SilentlyContinue | Select-Object -First 1
+          $lib = Get-ChildItem -Path $sdk -Recurse -Filter shaderc_shared.lib -ErrorAction SilentlyContinue | Select-Object -First 1
+          $inc = Get-ChildItem -Path $sdk -Recurse -Directory -Filter shaderc -ErrorAction SilentlyContinue | Where-Object { Test-Path (Join-Path $_.FullName "shaderc.h") } | Select-Object -First 1
+          if (-not $dll -or -not $lib -or -not $inc) {
+            Get-ChildItem $sdk | Select-Object Name
+            Get-ChildItem (Join-Path $sdk "Lib") -ErrorAction SilentlyContinue | Select-Object Name
+            Get-ChildItem (Join-Path $sdk "Bin") -ErrorAction SilentlyContinue | Select-Object Name
+            throw "shaderc not found in the Vulkan SDK"
+          }
+          Copy-Item $dll.FullName "$dep\bin\" -Force
+          Copy-Item $lib.FullName "$dep\lib\" -Force
+          Copy-Item $inc.FullName "$dep\include\" -Recurse -Force
+          $prefix = $dep -replace '\\','/'
+          $pc = "prefix=$prefix`nlibdir=`${prefix}/lib`nincludedir=`${prefix}/include`n`nName: shaderc`nDescription: shaderc (from the Vulkan SDK)`nVersion: 2025.1`nLibs: -L`${libdir} -lshaderc_shared`nCflags: -I`${includedir}`n"
+          Set-Content -Path "$dep\lib\pkgconfig\shaderc.pc" -Value $pc -Encoding ascii
+          Write-Host "shaderc: $($dll.FullName) / $($lib.FullName) / $($inc.FullName)"
+          Get-Content "$dep\lib\pkgconfig\shaderc.pc"
 
       - name: Make build directory
         run: |
