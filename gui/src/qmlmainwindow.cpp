@@ -8,6 +8,11 @@
 #include "macMouseAim.h"
 #endif
 #include <QCursor>
+#include <QSysInfo>
+#include <algorithm>
+#ifdef Q_OS_MACOS
+#include <sys/sysctl.h>
+#endif
 
 #include <qpa/qplatformnativeinterface.h>
 
@@ -2758,6 +2763,26 @@ void QmlMainWindow::setKeepVideo(bool keep)
     emit keepVideoChanged();
 }
 
+void QmlMainWindow::setColorAdjust(float brightness, float contrast, float saturation, float temperature)
+{
+    color_brightness.store(std::clamp(brightness, -0.5f, 0.5f), std::memory_order_relaxed);
+    color_contrast.store(std::clamp(contrast, 0.5f, 1.5f), std::memory_order_relaxed);
+    color_saturation.store(std::clamp(saturation, 0.0f, 2.0f), std::memory_order_relaxed);
+    color_temperature.store(std::clamp(temperature, -0.5f, 0.5f), std::memory_order_relaxed);
+    requestOverlayUpdate();
+}
+
+QString QmlMainWindow::chipName() const
+{
+#ifdef Q_OS_MACOS
+    char buf[256] = {};
+    size_t len = sizeof(buf) - 1;
+    if (sysctlbyname("machdep.cpu.brand_string", buf, &len, nullptr, 0) == 0)
+        return QString::fromUtf8(buf);
+#endif
+    return QSysInfo::currentCpuArchitecture();
+}
+
 void QmlMainWindow::captureMouseAim()
 {
     if (!session || mouse_aim_captured || !session->MouseAimEnabled())
@@ -5205,7 +5230,10 @@ renderer_backend_ready:
             setCursor(Qt::ArrowCursor);
         }
         session = s;
-        retina_vivid_enabled.storeRelaxed(this->settings && this->settings->GetRetinaVivid() ? 1 : 0);
+        if (this->settings && this->settings->GetRetinaVivid())
+            setColorAdjust(0.0f, 1.05f, 1.15f, 0.0f);
+        else
+            setColorAdjust(0.0f, 1.0f, 1.0f, 0.0f);
         stream_session_active.storeRelease(s ? 1 : 0);
         startup_video_visible_generation.fetchAndAddRelaxed(1);
         grab_input = 0;
@@ -6778,17 +6806,19 @@ void QmlMainWindow::render()
 
     struct pl_render_params params = *render_params;
     params.frame_mixer = effectiveFrameMixerConfig(&params);
-    // e11 Retina Vivid: PS5 games are graded for standard (Rec.709) TVs. The Mac's P3 panel can
-    // show richer colour, so give a gentle saturation/contrast lift like a TV's "vivid" mode.
-    // macOS still colour-manages the output, so skin tones stay natural at these values.
-    static const struct pl_color_adjustment e11_retina_vivid = []() {
-        struct pl_color_adjustment adj = pl_color_adjustment_neutral;
-        adj.contrast = 1.05f;
-        adj.saturation = 1.15f;
-        return adj;
-    }();
-    if (settings && stream_session_active.loadAcquire() != 0 && retina_vivid_enabled.loadRelaxed())
-        params.color_adjustment = &e11_retina_vivid;
+    // e11 colour filter (quick menu / Retina Vivid). PS5 games are graded for Rec.709 TVs; the Mac's
+    // P3 panel can show richer colour. macOS still colour-manages the output.
+    if (settings && stream_session_active.loadAcquire() != 0) {
+        render_color_adjust = pl_color_adjustment_neutral;
+        render_color_adjust.brightness = color_brightness.load(std::memory_order_relaxed);
+        render_color_adjust.contrast = color_contrast.load(std::memory_order_relaxed);
+        render_color_adjust.saturation = color_saturation.load(std::memory_order_relaxed);
+        render_color_adjust.temperature = color_temperature.load(std::memory_order_relaxed);
+        const bool neutral = render_color_adjust.brightness == 0.0f && render_color_adjust.contrast == 1.0f
+            && render_color_adjust.saturation == 1.0f && render_color_adjust.temperature == 0.0f;
+        if (!neutral)
+            params.color_adjustment = &render_color_adjust;
+    }
     const bool content_timed = params.frame_mixer == nullptr;
     const bool mixer_active = params.frame_mixer != nullptr;
     const bool has_settings = settings != nullptr;

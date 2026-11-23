@@ -146,6 +146,9 @@ public:
     VideoPreset videoPreset() const;
     void setVideoPreset(VideoPreset mode);
 
+    // e11 quick menu
+    Q_INVOKABLE void setColorAdjust(float brightness, float contrast, float saturation, float temperature);
+    Q_INVOKABLE QString chipName() const;
     Q_INVOKABLE void grabInput();
     Q_INVOKABLE void releaseInput();
     Q_INVOKABLE void requestOverlayUpdate();
@@ -268,7 +271,12 @@ private:
     void captureMouseAim();
     void releaseMouseAim();
     bool mouse_aim_captured = false;
-    QAtomicInteger<int> retina_vivid_enabled = 1;
+    // e11 live colour filter (written from the GUI thread, read by the render thread)
+    std::atomic<float> color_brightness{0.0f};
+    std::atomic<float> color_contrast{1.0f};
+    std::atomic<float> color_saturation{1.0f};
+    std::atomic<float> color_temperature{0.0f};
+    struct pl_color_adjustment render_color_adjust = {};
     QPointF mouse_aim_center;
     bool event(QEvent *event) override;
     QObject *focusObject() const override;
