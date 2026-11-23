@@ -948,7 +948,7 @@ DialogView {
 
                     Label {
                         Layout.alignment: Qt.AlignRight
-                        text: qsTr("(High Quality + Spatial Upscaling)")
+                        text: qsTr("(High Quality)")
                     }
 
                     Label {

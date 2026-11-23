@@ -690,8 +690,7 @@ static const QMap<PlaceboPreset, QString> placebo_preset_values = {
 	{ PlaceboPreset::Custom, "custom" }
 };
 
-// e11: FSR spatial upscaling sharpens the 1080p stream up to the Retina panel
-static const PlaceboPreset placebo_preset_default = PlaceboPreset::HighQualitySpatial;
+static const PlaceboPreset placebo_preset_default = PlaceboPreset::HighQuality;
 
 PlaceboPreset Settings::GetPlaceboPreset() const
 {
@@ -768,9 +767,8 @@ static const QMap<WindowType, QString> window_type_values = {
 
 WindowType Settings::GetWindowType() const
 {
-	// e11: Zoom fills the 16:10 Mac screen with the 16:9 picture (no black bars, no stretching)
-	auto v = settings.value("settings/window_type", window_type_values[WindowType::Zoom]).toString();
-	return window_type_values.key(v, WindowType::Zoom);
+	auto v = settings.value("settings/window_type", window_type_values[WindowType::Fullscreen]).toString();
+	return window_type_values.key(v, WindowType::Fullscreen);
 }
 
 void Settings::SetWindowType(WindowType type)
