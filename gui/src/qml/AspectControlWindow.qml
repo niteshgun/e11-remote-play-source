@@ -265,11 +265,8 @@ Window {
                 quickWindow.setLevel(lvl - 1);
                 perf.badSeconds = 0;
                 perf.status = qsTr("Lowered quality to keep it smooth");
-            } else if (perf.goodSeconds >= 45 && lvl < perf.maxLevel) {
-                quickWindow.setLevel(lvl + 1);
-                perf.goodSeconds = 0;
-                perf.status = qsTr("Raised quality");
             }
+            // Never step quality back up mid-session: every switch recompiles shaders and hitches.
         }
     }
 

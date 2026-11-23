@@ -434,4 +434,90 @@ Pane {
             running: true
         }
     }
+
+    // e11: controller card on the main screen (no background Bluetooth scanning)
+    Rectangle {
+        id: controllerCard
+        property int tick: 0
+        Timer { interval: 1500; repeat: true; running: true; onTriggered: controllerCard.tick++ }
+        function line(c) {
+            tick;
+            let parts = [c.friendlyName(), c.wired() ? qsTr("USB") : qsTr("Bluetooth")];
+            let b = c.batteryPercent();
+            if (!c.wired() && b >= 0)
+                parts.push(b + "%");
+            return parts.join(" · ");
+        }
+        readonly property bool psOnUsb: {
+            tick;
+            for (let i = 0; i < Chiaki.controllers.length; i++) {
+                let k = Chiaki.controllers[i].kind();
+                if ((k === "ps5" || k === "ps5edge" || k === "ps4") && Chiaki.controllers[i].wired())
+                    return true;
+            }
+            return false;
+        }
+        z: 5
+        anchors {
+            horizontalCenter: parent.horizontalCenter
+            bottom: parent.bottom
+            bottomMargin: 24
+        }
+        width: Math.min(parent.width - 180, 560)
+        implicitHeight: cardCol.implicitHeight + 24
+        height: implicitHeight
+        radius: 14
+        color: Qt.rgba(0.08, 0.08, 0.10, 0.88)
+        border.color: Chiaki.controllers.length > 0 ? Qt.rgba(0.35, 0.82, 0.48, 0.55) : Qt.rgba(1, 1, 1, 0.16)
+        border.width: 1
+
+        ColumnLayout {
+            id: cardCol
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 12
+            spacing: 6
+
+            RowLayout {
+                Layout.fillWidth: true
+                visible: Chiaki.controllers.length === 0
+                Label {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    color: "white"
+                    font.pixelSize: 14
+                    text: qsTr("🎮  Connect your controller: plug it in with USB-C, or pair it over Bluetooth.")
+                }
+                Button {
+                    text: qsTr("Bluetooth settings")
+                    flat: true
+                    onClicked: Qt.openUrlExternally("x-apple.systempreferences:com.apple.BluetoothSettings")
+                }
+            }
+            Repeater {
+                model: Chiaki.controllers
+                delegate: RowLayout {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    Rectangle { width: 9; height: 9; radius: 4.5; color: "#5ad17a" }
+                    Label {
+                        Layout.fillWidth: true
+                        color: "white"
+                        font.pixelSize: 14
+                        text: "🎮  " + controllerCard.line(modelData) + qsTr("  ·  connected")
+                    }
+                }
+            }
+            Label {
+                visible: controllerCard.psOnUsb
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                font.pixelSize: 11
+                color: "#ffd9a8"
+                text: qsTr("Inputs doubled? Your PS5 may also be using this controller over Bluetooth. Fix once on the PS5: "
+                         + "Settings → Accessories → Controller (General) → Communication Method → Use USB Cable.")
+            }
+        }
+    }
 }
