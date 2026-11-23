@@ -21,6 +21,11 @@ jobs:
       dep_folder: deps
       libplacebo_tag: v7.387.0
       sdl2_compat_tag: 2.32.74
+      # The runner's CMake 4.x refuses projects that declare cmake_minimum_required < 3.5
+      # (json-c in the pinned vcpkg baseline, and others). CMake's documented escape hatch:
+      CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+      # vcpkg scrubs the environment for port builds; let this one through.
+      VCPKG_KEEP_ENV_VARS: CMAKE_POLICY_VERSION_MINIMUM
 
     defaults:
       run:
