@@ -47,7 +47,7 @@ Window {
         property real customRays: 0.0
         property real customShadows: 0.6
         property bool advancedOpen: false
-        property bool showStats: true
+        property bool showStats: false
     }
 
     visible: shown
@@ -95,12 +95,17 @@ Window {
 
     // ---------- live stats ----------
     property int fps: 0
+    // Stats are sampled once a second into a plain string, so the panel redraws at most 1x/s
+    // and only when stats are shown. Nothing here runs while stats are off.
+    property string statsLine: ""
     Timer {
-        interval: 1000; repeat: true; running: quickWindow.visible
-        onTriggered: quickWindow.fps = Chiaki.window.takeFrameCount()
+        interval: 1000; repeat: true; running: quickWindow.visible && prefs.showStats && !quickWindow.collapsed
+        onTriggered: { quickWindow.fps = Chiaki.window.takeFrameCount(); quickWindow.statsLine = quickWindow.statsText(); }
     }
     function statsText() {
-        let parts = [fps + " fps"];
+        // Honest number: frames that actually reached the screen this second (arrived minus dropped)
+        let shown = Math.max(0, fps - Chiaki.window.droppedFrames);
+        let parts = [shown + " fps shown"];
         if (Chiaki.session) {
             parts.push(Chiaki.session.measuredBitrate.toFixed(1) + " Mbps");
             let loss = isFinite(Chiaki.session.averagePacketLoss) ? Chiaki.session.averagePacketLoss * 100 : 0;
@@ -113,7 +118,8 @@ Window {
 
     // ---------- controllers ----------
     property int controllerTick: 0   // bumps every 2 s so battery / connection refresh
-    Timer { interval: 2000; repeat: true; running: quickWindow.visible; onTriggered: quickWindow.controllerTick++ }
+    // Controller info refreshes only while the quick menu is open, never in the background during play
+    Timer { interval: 2000; repeat: true; running: quickWindow.visible && quickWindow.expanded; onTriggered: quickWindow.controllerTick++ }
     function controllerLine(c) {
         controllerTick; // dependency for refresh
         let parts = [c.friendlyName(), c.wired() ? qsTr("USB") : qsTr("Bluetooth")];
@@ -389,7 +395,7 @@ Window {
 
             Label {
                 visible: prefs.showStats
-                text: quickWindow.statsText()
+                text: quickWindow.statsLine
                 color: quickWindow.fps >= 55 || quickWindow.fps === 0 ? "#bfeccb" : "#ffd28a"
                 font.pixelSize: 12
                 font.family: "Menlo"
