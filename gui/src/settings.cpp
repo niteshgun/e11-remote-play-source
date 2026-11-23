@@ -566,10 +566,10 @@ unsigned int Settings::GetBitrateRemotePS4() const
 
 unsigned int Settings::GetBitrateLocalPS5() const
 {
-	// e11: start at a high ceiling on the home network (40 Mbps). The PS5 adapts its encoder
+	// e11: 20 Mbps on the home network (Wi-Fi safe). The PS5 adapts its encoder
 	// down automatically from the packet-loss reports we send every 200 ms, so this gives the
 	// best picture the connection can carry instead of the old 15 Mbps cap.
-	return settings.value("settings/bitrate_local_ps5", 40000).toUInt();
+	return settings.value("settings/bitrate_local_ps5", 20000).toUInt();
 }
 
 unsigned int Settings::GetBitrateRemotePS5() const
@@ -1002,11 +1002,12 @@ void Settings::SetMouseTouchEnabled(bool enabled)
 
 bool Settings::GetNeuralUpscale() const
 {
-	return settings.value("settings/neural_upscale", true).toBool();
+	// Off by default: per-frame processing + copies can cost smoothness. Opt-in under Advanced.
+	return settings.value("settings/neural_upscale_v2", false).toBool();
 }
 void Settings::SetNeuralUpscale(bool enabled)
 {
-	settings.setValue("settings/neural_upscale", enabled);
+	settings.setValue("settings/neural_upscale_v2", enabled);
 }
 
 bool Settings::GetShowAspectControl() const

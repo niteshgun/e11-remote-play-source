@@ -106,7 +106,7 @@ Window {
     // bitrate by itself from the packet-loss reports we send every 200 ms.
     function applyBitratePolicy() {
         if (prefs.autoBitrate) {
-            Chiaki.settings.bitrateLocalPS5 = 40000;
+            Chiaki.settings.bitrateLocalPS5 = 20000; // Wi-Fi safe; the PS5 still adapts down by itself
             Chiaki.settings.bitrateRemotePS5 = 0; // internet: resolution default (15 Mbps at 1080p)
         } else {
             Chiaki.settings.bitrateLocalPS5 = prefs.manualBitrateMbps * 1000;
@@ -187,6 +187,7 @@ Window {
 
     // Best level this Mac should handle comfortably at 1080p60
     function chipMaxLevel() {
+        return 2; // smoothness first: auto never goes above "High" (pick Sharp/Ultra by hand)
         let c = chip.toUpperCase();
         if (/M[3-9]/.test(c) || c.indexOf("PRO") >= 0 || c.indexOf("MAX") >= 0 || c.indexOf("ULTRA") >= 0)
             return 4; // newer / bigger GPUs: neural upscaling
