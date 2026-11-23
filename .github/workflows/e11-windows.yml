@@ -3,7 +3,7 @@ name: e11 Remote Play - Windows x64
 on:
   workflow_dispatch:
   push:
-    branches: [ e11 ]
+    branches: [ main ]
 
 permissions:
   contents: read
@@ -27,9 +27,24 @@ jobs:
         shell: powershell
 
     steps:
-      - uses: actions/checkout@v7
+      - name: Get original source (pinned)
+        uses: actions/checkout@v7
         with:
+          repository: streetpea/chiaki-ng
+          ref: 43728af2e639fecb8a7af1cd68c29820a40de973
           submodules: 'recursive'
+          fetch-depth: 0
+
+      - name: Get e11 changes
+        uses: actions/checkout@v7
+        with:
+          path: e11src
+
+      - name: Apply e11 changes
+        shell: bash
+        run: |
+          git apply --whitespace=nowarn e11src/e11-windows.patch
+          git status --short | head -50
 
       - name: Set vcpkg installed dir
         run: |
@@ -38,9 +53,9 @@ jobs:
       - name: Setup Vulkan
         run: |
           $ProgressPreference = 'SilentlyContinue'
-          $ver = (Invoke-WebRequest -Uri "https://vulkan.lunarg.com/sdk/latest.json" | ConvertFrom-Json).windows
+          $ver = (Invoke-WebRequest -UseBasicParsing -Uri "https://vulkan.lunarg.com/sdk/latest.json" | ConvertFrom-Json).windows
           echo Version $ver
-          Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/$ver/windows/vulkansdk-windows-X64-$ver.exe" -OutFile VulkanSDK.exe
+          Invoke-WebRequest -UseBasicParsing -Uri "https://sdk.lunarg.com/sdk/download/$ver/windows/vulkansdk-windows-X64-$ver.exe" -OutFile VulkanSDK.exe
           echo Downloaded
           .\VulkanSDK.exe --root ${{ env.VULKAN_SDK }}  --accept-licenses --default-answer --confirm-command install
 
@@ -65,6 +80,11 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           setup-python: false
+          # aqtinstall 3.3.0 (latest release) can't read Qt 6.12's new repository layout:
+          # "Failed to locate XML data for Qt version '6.12.1'". Fixed upstream in PR #1048,
+          # not released yet, so install it from this pinned master commit.
+          aqtsource: 'git+https://github.com/miurahr/aqtinstall.git@4c759852b1108cc801d8e24979136b895b5155d4'
+          cache: true
           version: "6.12.*"
           host: 'windows'
           target: 'desktop'
