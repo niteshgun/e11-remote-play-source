@@ -315,9 +315,6 @@ Window {
             cursorShape: Qt.PointingHandCursor
             onClicked: chipRoot.clicked()
         }
-        ToolTip.visible: tip !== "" && chipHover.containsMouse
-        ToolTip.delay: 600
-        ToolTip.text: tip
     }
 
     component SectionTitle: Label {
