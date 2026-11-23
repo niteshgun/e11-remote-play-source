@@ -21,7 +21,7 @@ Window {
     // ---------- persisted preferences ----------
     Settings {
         id: prefs
-        category: "e11_quick_menu"
+        category: "e11_quick_menu_v2"
         property int posX: -1
         property int posY: -1
         property bool collapsed: false
@@ -30,12 +30,19 @@ Window {
         property int manualBitrateMbps: 30
         // Performance
         property bool autoPerformance: true
-        // Colour: -1 = follow "Retina Vivid Colors" setting, 0 Natural, 1 Vivid, 2 Cinema, 3 Game, 4 Custom
+        // Look: -1 = follow "Retina Vivid Colors" setting; otherwise index into lookPresets,
+        // lookPresets.length = Custom
         property int colorPreset: -1
         property real customBrightness: 0.0
         property real customContrast: 1.0
         property real customSaturation: 1.0
         property real customWarmth: 0.0
+        property real customSharpen: 0.0
+        property real customClarity: 0.0
+        property real customVibrance: 0.0
+        property real customSplit: 0.0
+        property real customVignette: 0.0
+        property real customGrain: 0.0
     }
 
     visible: shown
@@ -103,32 +110,58 @@ Window {
         }
     }
 
-    // ---------- colour filters ----------
-    readonly property var colorPresets: [
-        { name: qsTr("Natural"), b: 0.00, c: 1.00, s: 1.00, t: 0.00 },
-        { name: qsTr("Vivid"),   b: 0.00, c: 1.05, s: 1.15, t: 0.00 },
-        { name: qsTr("Cinema"),  b: -0.02, c: 1.08, s: 0.95, t: -0.08 },
-        { name: qsTr("Game"),    b: 0.03, c: 1.10, s: 1.20, t: 0.03 }
+    // ---------- looks (colour + photo effects) ----------
+    // b brightness, c contrast, s saturation, t temperature (negative = warmer),
+    // then GPU photo effects: sh sharpen, cl clarity, vb vibrance, sp teal/orange, vg vignette, gr grain
+    readonly property var lookPresets: [
+        { name: qsTr("Natural"), tip: qsTr("As the game was graded"),
+          b: 0.00, c: 1.00, s: 1.00, t: 0.00,  sh: 0.0, cl: 0.0, vb: 0.0, sp: 0.0, vg: 0.0, gr: 0.0 },
+        { name: qsTr("Game"), tip: qsTr("Punchy and bright"),
+          b: 0.03, c: 1.10, s: 1.20, t: 0.03,  sh: 0.0, cl: 0.0, vb: 0.0, sp: 0.0, vg: 0.0, gr: 0.0 },
+        { name: qsTr("Game+"), tip: qsTr("Game look, crisper and deeper"),
+          b: 0.03, c: 1.12, s: 1.22, t: 0.03,  sh: 0.35, cl: 0.35, vb: 0.2, sp: 0.0, vg: 0.0, gr: 0.0 },
+        { name: qsTr("Vivid"), tip: qsTr("Rich P3 colour, sharper"),
+          b: 0.01, c: 1.14, s: 1.35, t: 0.00,  sh: 0.3, cl: 0.2, vb: 0.45, sp: 0.0, vg: 0.0, gr: 0.0 },
+        { name: qsTr("DSLR"), tip: qsTr("Photo look: clarity, vibrance, light vignette"),
+          b: 0.00, c: 1.10, s: 1.08, t: -0.03, sh: 0.45, cl: 0.7, vb: 0.5, sp: 0.15, vg: 0.35, gr: 0.0 },
+        { name: qsTr("HDR Pop"), tip: qsTr("Big local contrast, very crisp"),
+          b: -0.02, c: 1.18, s: 1.25, t: 0.00, sh: 0.55, cl: 1.0, vb: 0.4, sp: 0.0, vg: 0.15, gr: 0.0 },
+        { name: qsTr("Cinema"), tip: qsTr("Warm film grade, vignette and grain"),
+          b: -0.03, c: 1.15, s: 0.92, t: -0.15, sh: 0.15, cl: 0.3, vb: 0.0, sp: 0.6, vg: 0.55, gr: 0.25 },
+        { name: qsTr("Blockbuster"), tip: qsTr("Teal shadows, orange highlights"),
+          b: -0.01, c: 1.15, s: 1.05, t: -0.04, sh: 0.25, cl: 0.4, vb: 0.2, sp: 1.2, vg: 0.4, gr: 0.1 },
+        { name: qsTr("Vice Sunset"), tip: qsTr("Warm, glowing, saturated"),
+          b: 0.02, c: 1.08, s: 1.30, t: -0.25, sh: 0.2, cl: 0.2, vb: 0.4, sp: 0.35, vg: 0.3, gr: 0.0 },
+        { name: qsTr("Night"), tip: qsTr("Cool, moody, deep blacks"),
+          b: -0.04, c: 1.20, s: 1.05, t: 0.20,  sh: 0.25, cl: 0.4, vb: 0.25, sp: 0.0, vg: 0.5, gr: 0.1 },
+        { name: qsTr("Noir"), tip: qsTr("Black and white film"),
+          b: 0.00, c: 1.28, s: 0.00, t: 0.00,  sh: 0.3, cl: 0.6, vb: 0.0, sp: 0.0, vg: 0.6, gr: 0.35 }
     ]
+    readonly property int customLook: lookPresets.length
     readonly property int effectivePreset: prefs.colorPreset >= 0 ? prefs.colorPreset
                                          : (Chiaki.settings.retinaVivid ? 1 : 0)
 
+    function applyLook(v) {
+        Chiaki.window.setColorAdjust(v.b, v.c, v.s, v.t);
+        Chiaki.window.setPhotoEffects(v.sh, v.cl, v.vb, v.sp, v.vg, v.gr);
+    }
+    function customLookValues() {
+        return { b: prefs.customBrightness, c: prefs.customContrast, s: prefs.customSaturation, t: prefs.customWarmth,
+                 sh: prefs.customSharpen, cl: prefs.customClarity, vb: prefs.customVibrance,
+                 sp: prefs.customSplit, vg: prefs.customVignette, gr: prefs.customGrain };
+    }
     function applyColor() {
         let p = effectivePreset;
-        if (p === 4)
-            Chiaki.window.setColorAdjust(prefs.customBrightness, prefs.customContrast,
-                                         prefs.customSaturation, prefs.customWarmth);
-        else {
-            let v = colorPresets[p];
-            Chiaki.window.setColorAdjust(v.b, v.c, v.s, v.t);
-        }
+        applyLook(p === customLook ? customLookValues() : lookPresets[Math.min(p, lookPresets.length - 1)]);
     }
     function pickPreset(p) {
-        if (p === 4 && prefs.colorPreset !== 4 && effectivePreset < 4) {
-            // start "Custom" from whatever is showing now
-            let v = colorPresets[effectivePreset];
+        if (p === customLook && prefs.colorPreset !== customLook) {
+            // start "Custom" from whatever look is showing now
+            let v = lookPresets[Math.min(effectivePreset, lookPresets.length - 1)];
             prefs.customBrightness = v.b; prefs.customContrast = v.c;
             prefs.customSaturation = v.s; prefs.customWarmth = v.t;
+            prefs.customSharpen = v.sh; prefs.customClarity = v.cl; prefs.customVibrance = v.vb;
+            prefs.customSplit = v.sp; prefs.customVignette = v.vg; prefs.customGrain = v.gr;
         }
         prefs.colorPreset = p;
         applyColor();
@@ -458,24 +491,24 @@ Window {
                 onToggled: Chiaki.settings.vSyncEnabled = checked
             }
 
-            // ----- Colour -----
-            SectionTitle { text: qsTr("Colour (Retina display)") }
+            // ----- Looks -----
+            SectionTitle { text: qsTr("Look (Retina display)") }
             Flow {
                 Layout.fillWidth: true
                 spacing: 4
                 Repeater {
-                    model: [qsTr("Natural"), qsTr("Vivid"), qsTr("Cinema"), qsTr("Game"), qsTr("Custom")]
+                    model: quickWindow.lookPresets.length + 1
                     delegate: Chip {
                         required property int index
-                        required property string modelData
-                        text: modelData
+                        text: index === quickWindow.customLook ? qsTr("Custom") : quickWindow.lookPresets[index].name
+                        tip: index === quickWindow.customLook ? qsTr("Your own mix") : quickWindow.lookPresets[index].tip
                         selected: quickWindow.effectivePreset === index
                         onClicked: quickWindow.pickPreset(index)
                     }
                 }
             }
             ColumnLayout {
-                visible: quickWindow.effectivePreset === 4
+                visible: quickWindow.effectivePreset === quickWindow.customLook
                 Layout.fillWidth: true
                 spacing: 0
                 SliderRow {
@@ -487,25 +520,67 @@ Window {
                 }
                 SliderRow {
                     text: qsTr("Contrast")
-                    from: 0.8; to: 1.3; stepSize: 0.01
+                    from: 0.8; to: 1.4; stepSize: 0.01
                     value: prefs.customContrast
                     valueText: Math.round(value * 100) + "%"
                     onMoved: { prefs.customContrast = value; quickWindow.applyColor(); }
                 }
                 SliderRow {
                     text: qsTr("Saturation")
-                    from: 0.5; to: 1.6; stepSize: 0.01
+                    from: 0.0; to: 1.8; stepSize: 0.01
                     value: prefs.customSaturation
                     valueText: Math.round(value * 100) + "%"
                     onMoved: { prefs.customSaturation = value; quickWindow.applyColor(); }
                 }
                 SliderRow {
                     text: qsTr("Warmth")
-                    from: -0.3; to: 0.3; stepSize: 0.01
+                    from: -0.4; to: 0.4; stepSize: 0.01
                     value: -prefs.customWarmth
                     valueText: (value >= 0 ? "+" : "") + Math.round(value * 100)
                     // libplacebo: negative temperature = warmer
                     onMoved: { prefs.customWarmth = -value; quickWindow.applyColor(); }
+                }
+                SliderRow {
+                    text: qsTr("Sharpen")
+                    from: 0.0; to: 1.5; stepSize: 0.05
+                    value: prefs.customSharpen
+                    valueText: Math.round(value * 100)
+                    onMoved: { prefs.customSharpen = value; quickWindow.applyColor(); }
+                }
+                SliderRow {
+                    text: qsTr("Clarity")
+                    from: 0.0; to: 1.5; stepSize: 0.05
+                    value: prefs.customClarity
+                    valueText: Math.round(value * 100)
+                    onMoved: { prefs.customClarity = value; quickWindow.applyColor(); }
+                }
+                SliderRow {
+                    text: qsTr("Vibrance")
+                    from: 0.0; to: 1.2; stepSize: 0.05
+                    value: prefs.customVibrance
+                    valueText: Math.round(value * 100)
+                    onMoved: { prefs.customVibrance = value; quickWindow.applyColor(); }
+                }
+                SliderRow {
+                    text: qsTr("Teal/Orange")
+                    from: 0.0; to: 1.5; stepSize: 0.05
+                    value: prefs.customSplit
+                    valueText: Math.round(value * 100)
+                    onMoved: { prefs.customSplit = value; quickWindow.applyColor(); }
+                }
+                SliderRow {
+                    text: qsTr("Vignette")
+                    from: 0.0; to: 1.0; stepSize: 0.05
+                    value: prefs.customVignette
+                    valueText: Math.round(value * 100)
+                    onMoved: { prefs.customVignette = value; quickWindow.applyColor(); }
+                }
+                SliderRow {
+                    text: qsTr("Film grain")
+                    from: 0.0; to: 1.0; stepSize: 0.05
+                    value: prefs.customGrain
+                    valueText: Math.round(value * 100)
+                    onMoved: { prefs.customGrain = value; quickWindow.applyColor(); }
                 }
             }
         }

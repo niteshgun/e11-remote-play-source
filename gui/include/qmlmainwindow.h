@@ -148,6 +148,7 @@ public:
 
     // e11 quick menu
     Q_INVOKABLE void setColorAdjust(float brightness, float contrast, float saturation, float temperature);
+    Q_INVOKABLE void setPhotoEffects(float sharpen, float clarity, float vibrance, float split, float vignette, float grain);
     Q_INVOKABLE QString chipName() const;
     Q_INVOKABLE bool neuralUpscaleAvailable() const;
     Q_INVOKABLE QString neuralUpscaleStatus() const;
@@ -279,6 +280,8 @@ private:
     std::atomic<float> color_saturation{1.0f};
     std::atomic<float> color_temperature{0.0f};
     struct pl_color_adjustment render_color_adjust = {};
+    std::atomic<float> fx_sharpen{0.0f}, fx_clarity{0.0f}, fx_vibrance{0.0f};
+    std::atomic<float> fx_split{0.0f}, fx_vignette{0.0f}, fx_grain{0.0f};
     QPointF mouse_aim_center;
     bool event(QEvent *event) override;
     QObject *focusObject() const override;
@@ -478,6 +481,7 @@ private:
     pl_options renderparams_opts = {};
     bool renderparams_changed = false;
     const struct pl_hook *fsr_hook = nullptr;
+    const struct pl_hook *looks_hook = nullptr; // e11 photo looks pass
     const struct pl_hook *fsrcnnx_hook_8 = nullptr;
     const struct pl_hook *fsrcnnx_hook_16 = nullptr;
 

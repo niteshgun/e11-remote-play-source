@@ -2692,6 +2692,7 @@ QmlMainWindow::~QmlMainWindow()
     // User shader hooks hold a reference to the GPU (their descriptors destroy
     // buffers/textures via p->gpu), so they must be released before the GPU is.
     pl_mpv_user_shader_destroy(&fsr_hook);
+    pl_mpv_user_shader_destroy(&looks_hook);
     pl_mpv_user_shader_destroy(&fsrcnnx_hook_8);
     pl_mpv_user_shader_destroy(&fsrcnnx_hook_16);
     if (render_backend == RenderBackend::Vulkan) {
@@ -2796,6 +2797,17 @@ QString QmlMainWindow::neuralUpscaleStatus() const
 #else
     return tr("Mac only");
 #endif
+}
+
+void QmlMainWindow::setPhotoEffects(float sharpen, float clarity, float vibrance, float split, float vignette, float grain)
+{
+    fx_sharpen.store(std::clamp(sharpen, 0.0f, 2.0f), std::memory_order_relaxed);
+    fx_clarity.store(std::clamp(clarity, 0.0f, 2.0f), std::memory_order_relaxed);
+    fx_vibrance.store(std::clamp(vibrance, 0.0f, 1.5f), std::memory_order_relaxed);
+    fx_split.store(std::clamp(split, 0.0f, 1.5f), std::memory_order_relaxed);
+    fx_vignette.store(std::clamp(vignette, 0.0f, 1.0f), std::memory_order_relaxed);
+    fx_grain.store(std::clamp(grain, 0.0f, 1.0f), std::memory_order_relaxed);
+    requestOverlayUpdate();
 }
 
 QString QmlMainWindow::chipName() const
@@ -5428,6 +5440,7 @@ renderer_backend_ready:
     pl_options_reset(this->renderparams_opts, &pl_render_high_quality_params);
     this->renderparams_changed = true;
     this->fsr_hook = load_mpv_hook(placeboGpu(), QStringLiteral(":/shaders/FSR.glsl"));
+    this->looks_hook = load_mpv_hook(placeboGpu(), QStringLiteral(":/shaders/e11_looks.glsl"));
     this->fsrcnnx_hook_8 = load_mpv_hook(placeboGpu(), QStringLiteral(":/shaders/FSRCNNX_x2_8-0-4-1.glsl"));
     this->fsrcnnx_hook_16 = load_mpv_hook(placeboGpu(), QStringLiteral(":/shaders/FSRCNNX_x2_16-0-4-1.glsl"));
 
@@ -7654,10 +7667,35 @@ void QmlMainWindow::render()
                                                fsr_hook, fsrcnnx_hook_8, fsrcnnx_hook_16);
         }
     }
-    const struct pl_hook *active_hooks[] = {fsrcnnx_hook};
-    if (fsrcnnx_hook) {
+    // e11: optional photo-looks pass after the upscaler (sharpen/clarity/vibrance/toning/vignette/grain)
+    const struct pl_hook *active_hooks[2] = {nullptr, nullptr};
+    int active_hook_count = 0;
+    if (fsrcnnx_hook)
+        active_hooks[active_hook_count++] = fsrcnnx_hook;
+    if (looks_hook && stream_session_active.loadAcquire() != 0) {
+        const float fx[] = {
+            fx_sharpen.load(std::memory_order_relaxed), fx_clarity.load(std::memory_order_relaxed),
+            fx_vibrance.load(std::memory_order_relaxed), fx_split.load(std::memory_order_relaxed),
+            fx_vignette.load(std::memory_order_relaxed), fx_grain.load(std::memory_order_relaxed),
+        };
+        static const char *const fx_names[] = {"sharpen", "clarity", "vibrance", "split", "vignette", "grain"};
+        bool any = false;
+        for (int p = 0; p < looks_hook->num_parameters; p++) {
+            for (int k = 0; k < 6; k++) {
+                if (qstrcmp(looks_hook->parameters[p].name, fx_names[k]) == 0) {
+                    looks_hook->parameters[p].data->f = fx[k];
+                    any = any || fx[k] > 0.0f;
+                }
+            }
+        }
+        if (any)
+            active_hooks[active_hook_count++] = looks_hook;
+    }
+    if (active_hook_count > 0) {
         params.hooks = active_hooks;
-        params.num_hooks = 1;
+        params.num_hooks = active_hook_count;
+    }
+    if (fsrcnnx_hook) {
         switch (video_preset) {
         case VideoPreset::HighQualitySpatial:
             if (fsrcnnx_hook == fsr_hook)
