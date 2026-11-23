@@ -152,6 +152,12 @@ public:
     Q_INVOKABLE void setShadowDetail(float shadows);
     Q_INVOKABLE void setPhotoEffects(float sharpen, float clarity, float vibrance, float split, float vignette, float grain);
     Q_INVOKABLE QString chipName() const;
+    // e11 AI Play
+    Q_INVOKABLE bool aiPlaySetRecording(bool on);
+    Q_INVOKABLE bool aiPlayRecording() const;
+    Q_INVOKABLE int aiPlayFramesRecorded() const;
+    Q_INVOKABLE double aiPlayTotalMinutes() const;
+    Q_INVOKABLE void aiPlayOpenFolder() const;
     Q_INVOKABLE bool neuralUpscaleAvailable() const;
     Q_INVOKABLE QString neuralUpscaleStatus() const;
     Q_INVOKABLE void grabInput();

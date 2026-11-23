@@ -9,6 +9,10 @@
 #include "macNeuralUpscale.h"
 #endif
 #include <QCursor>
+#include <QDesktopServices>
+#include <QDir>
+#include <QUrl>
+#include "aiplayrecorder.h"
 #include <QSysInfo>
 #include <algorithm>
 #ifdef Q_OS_MACOS
@@ -2823,6 +2827,35 @@ void QmlMainWindow::setPhotoEffects(float sharpen, float clarity, float vibrance
     requestOverlayUpdate();
 }
 
+bool QmlMainWindow::aiPlaySetRecording(bool on)
+{
+    if (on)
+        return AIPlayRecorder::Instance().Start();
+    AIPlayRecorder::Instance().Stop();
+    return true;
+}
+
+bool QmlMainWindow::aiPlayRecording() const
+{
+    return AIPlayRecorder::Instance().IsRecording();
+}
+
+int QmlMainWindow::aiPlayFramesRecorded() const
+{
+    return AIPlayRecorder::Instance().FramesRecorded();
+}
+
+double QmlMainWindow::aiPlayTotalMinutes() const
+{
+    return AIPlayRecorder::Instance().TotalMinutesOnDisk();
+}
+
+void QmlMainWindow::aiPlayOpenFolder() const
+{
+    QDir().mkpath(AIPlayRecorder::Instance().RootFolder());
+    QDesktopServices::openUrl(QUrl::fromLocalFile(AIPlayRecorder::Instance().RootFolder()));
+}
+
 QString QmlMainWindow::chipName() const
 {
 #ifdef Q_OS_MACOS
@@ -5281,6 +5314,8 @@ renderer_backend_ready:
             setCursor(Qt::ArrowCursor);
         }
         session = s;
+        if (!s)
+            AIPlayRecorder::Instance().Stop();
 #ifdef Q_OS_MACOS
         MacNeuralUpscale::SetEnabled(this->settings && this->settings->GetNeuralUpscale());
         MacNeuralUpscale::Reset();

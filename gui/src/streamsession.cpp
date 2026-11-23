@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include "aiplayrecorder.h"
 
 #include <cstring>
 
@@ -1489,6 +1490,7 @@ void StreamSession::DpadSendFeedbackState()
 			dpad_touch_stop_timer->start(NEW_DPAD_TOUCH_INTERVAL_MS);
 	}
 	chiaki_controller_state_or(&state, &state, &dpad_touch_state);
+	AIPlayRecorder::Instance().SetControllerState(state);
 	chiaki_session_set_controller_state(&session, &state);
 }
 
@@ -1548,6 +1550,7 @@ void StreamSession::SendFeedbackState()
 			dpad_touch_stop_timer->start(NEW_DPAD_TOUCH_INTERVAL_MS);
 	}
 	chiaki_controller_state_or(&state, &state, &dpad_touch_state);
+	AIPlayRecorder::Instance().SetControllerState(state);
 	chiaki_session_set_controller_state(&session, &state);
 }
 
