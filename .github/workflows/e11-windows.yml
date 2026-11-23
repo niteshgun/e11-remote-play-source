@@ -85,7 +85,9 @@ jobs:
           # not released yet, so install it from this pinned master commit.
           aqtsource: 'git+https://github.com/miurahr/aqtinstall.git@4c759852b1108cc801d8e24979136b895b5155d4'
           cache: true
-          version: "6.12.*"
+          # 6.12.0, not 6.12.*: Qt WebEngine (PSN sign-in) is only published for 6.12.0 so far,
+          # and the Mac build also uses 6.12.0.
+          version: "6.12.0"
           host: 'windows'
           target: 'desktop'
           modules: 'qtwebengine qtpositioning qtwebchannel qtwebsockets qtserialport'
