@@ -63,6 +63,10 @@ Window {
     Component.onCompleted: {
         collapsed = prefs.collapsed;
         applyBitratePolicy();
+        if (streaming) {
+            applyColor();
+            perf.start();
+        }
     }
 
     function placeDefault() {
@@ -78,6 +82,14 @@ Window {
     onVisibleChanged: {
         if (visible) {
             placeDefault();
+            applyColor();
+        }
+    }
+    // Auto performance follows the stream session, not the panel's visibility
+    // (it keeps working when the panel is hidden or the in-game menu is open).
+    readonly property bool streaming: !!Chiaki.session
+    onStreamingChanged: {
+        if (streaming) {
             applyColor();
             perf.start();
         } else {
@@ -231,24 +243,39 @@ Window {
         Chiaki.window.videoPreset = qualityPresets[l];
     }
 
+    // ---------- Auto performance ----------
+    // Smart and live: V-Sync + Neural Engine on, then quality goes UP after 20 clean seconds and
+    // DOWN after 3 bad seconds. A level that drops frames right after a step up is remembered
+    // as this Mac's ceiling for the session, so it settles instead of bouncing.
     QtObject {
         id: perf
-        property int maxLevel: 2
+        property int ceiling: 4          // highest level allowed this session (learned)
         property int badSeconds: 0
         property int goodSeconds: 0
+        property int sinceStepUp: 999    // seconds since the last step up
+        property bool neuralTried: false
+        property int neuralOffTest: 0    // >0: seconds left to see if turning the Neural Engine off helped
+        property int cleanStreak: 0      // seconds without drops, to forgive a learned ceiling
         property string status: ""
         function start() {
-            maxLevel = quickWindow.chipMaxLevel();
+            ceiling = 4;
             badSeconds = 0;
             goodSeconds = 0;
-            if (prefs.autoPerformance2)
-                quickWindow.setLevel(maxLevel);
+            sinceStepUp = 999;
+            neuralTried = false;
+            neuralOffTest = 0;
+            cleanStreak = 0;
+            if (prefs.autoPerformance2) {
+                Chiaki.settings.vSyncEnabled = true;
+                if (Chiaki.window.neuralUpscaleAvailable())
+                    Chiaki.settings.neuralUpscale = true;
+                quickWindow.setLevel(quickWindow.chipMaxLevel());
+                status = qsTr("Auto: tuning for this Mac…");
+            }
             perfTimer.start();
         }
         function stop() { perfTimer.stop(); }
     }
-    // Watches dropped frames every second: steps quality down if the Mac can't keep up,
-    // and back up after a long clean stretch.
     Timer {
         id: perfTimer
         interval: 1000
@@ -258,21 +285,64 @@ Window {
                 perf.status = "";
                 return;
             }
+            perf.sinceStepUp++;
             let dropped = Chiaki.window.droppedFrames;
             if (dropped >= 3) {
                 perf.badSeconds++;
                 perf.goodSeconds = 0;
+                perf.cleanStreak = 0;
             } else {
                 perf.goodSeconds++;
                 perf.badSeconds = 0;
+                perf.cleanStreak++;
+            }
+            // A Wi-Fi blip shouldn't cap quality forever: after 2 clean minutes, allow one level more
+            if (perf.cleanStreak >= 120 && perf.ceiling < 4) {
+                perf.ceiling++;
+                perf.cleanStreak = 0;
+            }
+            // Neural Engine experiment: if it's still dropping without it, it wasn't the cause
+            if (perf.neuralOffTest > 0) {
+                perf.neuralOffTest--;
+                if (dropped >= 3 && Chiaki.window.neuralUpscaleAvailable()) {
+                    Chiaki.settings.neuralUpscale = true;
+                    perf.neuralOffTest = 0;
+                } else if (perf.neuralOffTest === 0 && perf.goodSeconds > 0) {
+                    perf.status = qsTr("Auto: Fast · smooth without Neural Engine");
+                }
             }
             let lvl = quickWindow.currentLevel();
-            if (perf.badSeconds >= 3 && lvl > 0) {
-                quickWindow.setLevel(lvl - 1);
+            let name = quickWindow.qualityNames[lvl];
+            // Step down: quicker right after a step up (that level is too much for this Mac)
+            let limit = perf.sinceStepUp <= 20 ? 2 : 3;
+            if (perf.badSeconds >= limit) {
                 perf.badSeconds = 0;
-                perf.status = qsTr("Lowered quality to keep it smooth");
+                if (lvl > 0) {
+                    if (perf.sinceStepUp <= 20)
+                        perf.ceiling = lvl - 1;
+                    quickWindow.setLevel(lvl - 1);
+                    perf.status = qsTr("Auto: %1 (lowered to stay smooth)").arg(quickWindow.qualityNames[lvl - 1]);
+                } else if (Chiaki.settings.neuralUpscale && !perf.neuralTried) {
+                    // Already at Fast and still dropping: try without the Neural Engine once
+                    perf.neuralTried = true;
+                    perf.neuralOffTest = 8;
+                    Chiaki.settings.neuralUpscale = false;
+                    perf.status = qsTr("Auto: Fast, Neural Engine off (network or Mac busy)");
+                } else {
+                    perf.status = qsTr("Auto: Fast (frames are dropping: check Wi-Fi)");
+                }
+                return;
             }
-            // Never step quality back up mid-session: every switch recompiles shaders and hitches.
+            // Step up after a long clean stretch, never past what failed before
+            if (perf.goodSeconds >= 20 && lvl < perf.ceiling) {
+                perf.goodSeconds = 0;
+                perf.sinceStepUp = 0;
+                quickWindow.setLevel(lvl + 1);
+                perf.status = qsTr("Auto: trying %1…").arg(quickWindow.qualityNames[lvl + 1]);
+                return;
+            }
+            if (perf.goodSeconds >= 5 && perf.sinceStepUp > 20)
+                perf.status = qsTr("Auto: %1 · smooth").arg(name);
         }
     }
 
