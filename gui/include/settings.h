@@ -443,6 +443,13 @@ class Settings : public QObject
 		bool GetMouseTouchEnabled() const;
 		void SetMouseTouchEnabled(bool enabled);
 
+		bool GetMouseAimEnabled() const;
+		void SetMouseAimEnabled(bool enabled);
+		int GetMouseAimSensitivity() const;
+		void SetMouseAimSensitivity(int sensitivity);
+		bool GetMouseAimInvertY() const;
+		void SetMouseAimInvertY(bool invert);
+
 		bool GetDpadTouchEnabled() const;
 		void SetDpadTouchEnabled(bool enabled);
 

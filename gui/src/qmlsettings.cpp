@@ -809,6 +809,39 @@ void QmlSettings::setMouseTouchEnabled(bool enabled)
     emit mouseTouchEnabledChanged();
 }
 
+bool QmlSettings::mouseAimEnabled() const
+{
+    return settings->GetMouseAimEnabled();
+}
+
+void QmlSettings::setMouseAimEnabled(bool enabled)
+{
+    settings->SetMouseAimEnabled(enabled);
+    emit mouseAimEnabledChanged();
+}
+
+int QmlSettings::mouseAimSensitivity() const
+{
+    return settings->GetMouseAimSensitivity();
+}
+
+void QmlSettings::setMouseAimSensitivity(int sensitivity)
+{
+    settings->SetMouseAimSensitivity(sensitivity);
+    emit mouseAimSensitivityChanged();
+}
+
+bool QmlSettings::mouseAimInvertY() const
+{
+    return settings->GetMouseAimInvertY();
+}
+
+void QmlSettings::setMouseAimInvertY(bool invert)
+{
+    settings->SetMouseAimInvertY(invert);
+    emit mouseAimInvertYChanged();
+}
+
 bool QmlSettings::keyboardEnabled() const
 {
     return settings->GetKeyboardEnabled();
@@ -1947,6 +1980,9 @@ void QmlSettings::refreshAllKeys()
     emit psnAuthTokenExpiryChanged();
     emit psnAccountIdChanged();
     emit mouseTouchEnabledChanged();
+    emit mouseAimEnabledChanged();
+    emit mouseAimSensitivityChanged();
+    emit mouseAimInvertYChanged();
     emit keyboardEnabledChanged();
     emit dpadTouchEnabledChanged();
     emit iDROnFECFailureEnabledChanged();

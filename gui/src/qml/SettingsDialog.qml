@@ -2408,6 +2408,43 @@ DialogView {
                                 }
                             }
                         }
+                        CheckBox {
+                            text: qsTr("Mouse Aim (click stream to capture, ` to release)")
+                            checked: Chiaki.settings.mouseAimEnabled
+                            onToggled: Chiaki.settings.mouseAimEnabled = checked
+                            Layout.alignment: Qt.AlignRight
+                            Material.roundedScale: Material.SmallScale
+                            Material.background: visualFocus ? Material.accent : undefined
+                            onActiveFocusChanged: if (activeFocus) keysFlick.ensureItemVisible(this)
+                        }
+                        CheckBox {
+                            text: qsTr("Invert Mouse Y")
+                            enabled: Chiaki.settings.mouseAimEnabled
+                            checked: Chiaki.settings.mouseAimInvertY
+                            onToggled: Chiaki.settings.mouseAimInvertY = checked
+                            Layout.alignment: Qt.AlignRight
+                            Material.roundedScale: Material.SmallScale
+                            Material.background: visualFocus ? Material.accent : undefined
+                            onActiveFocusChanged: if (activeFocus) keysFlick.ensureItemVisible(this)
+                        }
+                        RowLayout {
+                            Layout.alignment: Qt.AlignRight
+                            spacing: 10
+                            enabled: Chiaki.settings.mouseAimEnabled
+                            Label {
+                                text: qsTr("Mouse Sensitivity: %1").arg(mouseAimSlider.value)
+                            }
+                            Slider {
+                                id: mouseAimSlider
+                                Layout.preferredWidth: 250
+                                from: 1
+                                to: 100
+                                stepSize: 1
+                                value: Chiaki.settings.mouseAimSensitivity
+                                onMoved: Chiaki.settings.mouseAimSensitivity = value
+                                onActiveFocusChanged: if (activeFocus) keysFlick.ensureItemVisible(this)
+                            }
+                        }
                         Repeater {
                             id: chiakiKeys
                             model: Chiaki.settings.controllerMapping
@@ -3136,8 +3173,10 @@ DialogView {
                     Layout.preferredWidth: 400
                     verticalAlignment: Text.AlignTop
                     wrapMode: Text.Wrap
-                    text: "<h1>chiaki-ng</h1> by Street Pea, version %1
-                        <h2>Fork of Chiaki</h2> by Florian Markl at version 2.1.1
+                    text: "<h1>e11: Remote Play</h1> by e11, version %1
+                        <p>Remote play client for PlayStation®4 and PlayStation®5. Not affiliated with or endorsed by Sony Interactive Entertainment. PlayStation® and PlayStation®5 are trademarks of Sony Group Corporation.</p>
+                        <h2>Based on chiaki-ng</h2> by Street Pea, a fork of Chiaki by Florian Markl
+                        <p>Source code: https://github.com/streetpea/chiaki-ng</p>
 
                         <p>This program is free software: you can redistribute it and/or modify
                         it under the terms of the GNU Affero General Public License version 3

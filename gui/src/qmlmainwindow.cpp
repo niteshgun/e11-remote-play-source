@@ -4,6 +4,10 @@
 #include "chiaki/log.h"
 #include "chiaki/time.h"
 #include "streamsession.h"
+#ifdef Q_OS_MACOS
+#include "macMouseAim.h"
+#endif
+#include <QCursor>
 
 #include <qpa/qplatformnativeinterface.h>
 
@@ -2754,8 +2758,40 @@ void QmlMainWindow::setKeepVideo(bool keep)
     emit keepVideoChanged();
 }
 
+void QmlMainWindow::captureMouseAim()
+{
+    if (!session || mouse_aim_captured || !session->MouseAimEnabled())
+        return;
+    mouse_aim_captured = true;
+    session->SetMouseAimActive(true);
+    setCursor(Qt::BlankCursor);
+#ifdef Q_OS_MACOS
+    MacMouseAim::Start([this](double dx, double dy) {
+        if (session && mouse_aim_captured)
+            session->HandleMouseAimDelta(dx, dy);
+    });
+#else
+    mouse_aim_center = QPointF(width() / 2.0, height() / 2.0);
+    QCursor::setPos(mapToGlobal(mouse_aim_center.toPoint()));
+#endif
+}
+
+void QmlMainWindow::releaseMouseAim()
+{
+    if (!mouse_aim_captured)
+        return;
+    mouse_aim_captured = false;
+#ifdef Q_OS_MACOS
+    MacMouseAim::Stop();
+#endif
+    if (session)
+        session->SetMouseAimActive(false);
+    setCursor(Qt::ArrowCursor);
+}
+
 void QmlMainWindow::grabInput()
 {
+    releaseMouseAim();
     setCursor(Qt::ArrowCursor);
     grab_input++;
     if (session)
@@ -2881,9 +2917,9 @@ void QmlMainWindow::setSettings(Settings *new_settings)
     QString profile = settings->GetCurrentProfile();
     qCCritical(chiakiGui) << "Current Profile: " << profile;
     if(profile.isEmpty())
-        QGuiApplication::setApplicationDisplayName("chiaki-ng");
+        QGuiApplication::setApplicationDisplayName("e11: Remote Play");
     else
-        QGuiApplication::setApplicationDisplayName(QString("chiaki-ng:%1").arg(profile));
+        QGuiApplication::setApplicationDisplayName(QString("e11: Remote Play:%1").arg(profile));
     this->setTitle(QGuiApplication::applicationDisplayName());
 }
 
@@ -5161,6 +5197,13 @@ renderer_backend_ready:
     connect(backend, &QmlBackend::sessionChanged, this, [this, exit_app_on_stream_exit](StreamSession *s) {
         const bool preserve_startup_warmup = s && startup_warmup_preserve_next_session_change;
         startup_warmup_preserve_next_session_change = false;
+        if (mouse_aim_captured) {
+            mouse_aim_captured = false;
+#ifdef Q_OS_MACOS
+            MacMouseAim::Stop();
+#endif
+            setCursor(Qt::ArrowCursor);
+        }
         session = s;
         stream_session_active.storeRelease(s ? 1 : 0);
         startup_video_visible_generation.fetchAndAddRelaxed(1);
@@ -7710,8 +7753,26 @@ bool QmlMainWindow::event(QEvent *event)
         if (static_cast<QMouseEvent*>(event)->source() != Qt::MouseEventNotSynthesized)
             return true;
         if (session && !grab_input) {
+            QMouseEvent *me = static_cast<QMouseEvent*>(event);
+            // e11 mouse aim: first left click on the stream captures the mouse
+            if (!mouse_aim_captured && session->MouseAimEnabled()
+                    && event->type() == QEvent::MouseButtonPress && me->button() == Qt::LeftButton) {
+                captureMouseAim();
+                return true;
+            }
+            if (mouse_aim_captured && event->type() == QEvent::MouseMove) {
+#ifndef Q_OS_MACOS
+                // Non-mac: measure movement from window centre, then recentre the cursor
+                QPointF d = me->position() - mouse_aim_center;
+                if (!d.isNull()) {
+                    session->HandleMouseAimDelta(d.x(), d.y());
+                    QCursor::setPos(mapToGlobal(mouse_aim_center.toPoint()));
+                }
+#endif
+                return true;
+            }
             if (event->type() == QEvent::MouseMove)
-                session->HandleMouseMoveEvent(static_cast<QMouseEvent*>(event), width(), height());
+                session->HandleMouseMoveEvent(me, width(), height());
             else if (event->type() == QEvent::MouseButtonPress)
                 session->HandleMousePressEvent(static_cast<QMouseEvent*>(event));
             else if (event->type() == QEvent::MouseButtonRelease)
@@ -7721,6 +7782,10 @@ bool QmlMainWindow::event(QEvent *event)
         QGuiApplication::sendEvent(quick_window, event);
         break;
     case QEvent::MouseButtonDblClick:
+        if (mouse_aim_captured && session) {
+            session->HandleMousePressEvent(static_cast<QMouseEvent*>(event));
+            return true;
+        }
         if(!settings->GetFullscreenDoubleClickEnabled())
             break;
         if (session && !grab_input) {
@@ -7730,7 +7795,27 @@ bool QmlMainWindow::event(QEvent *event)
                 normalTime();
         }
         break;
+    case QEvent::Wheel:
+        if (session && mouse_aim_captured && !grab_input) {
+            session->HandleWheelEvent(static_cast<QWheelEvent*>(event));
+            return true;
+        }
+        break;
+    case QEvent::FocusOut:
+        releaseMouseAim();
+        break;
     case QEvent::KeyPress:
+        // e11: ` (backtick) toggles mouse aim capture
+        if (session && !grab_input && static_cast<QKeyEvent*>(event)->key() == Qt::Key_QuoteLeft
+                && session->MouseAimEnabled()) {
+            if (!static_cast<QKeyEvent*>(event)->isAutoRepeat()) {
+                if (mouse_aim_captured)
+                    releaseMouseAim();
+                else
+                    captureMouseAim();
+            }
+            return true;
+        }
         if (handleShortcut(static_cast<QKeyEvent*>(event)))
             return true;
     case QEvent::KeyRelease:

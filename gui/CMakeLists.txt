@@ -78,6 +78,8 @@ if(APPLE)
 	list(APPEND SOURCE_FILES
 		include/macMicPermission.h
 		src/macMicPermission.m
+		include/macMouseAim.h
+		src/macMouseAim.mm
 		include/macWakeSleep.h
 		src/macWakeSleep.cpp
 	)
@@ -139,17 +141,17 @@ if(NOT CHIAKI_ENABLE_FFMPEG_DECODER)
 	message(FATAL_ERROR "Chiaki GUI requires CHIAKI_ENABLE_FFMPEG_DECODER=ON")
 endif()
 if(APPLE)
-	target_link_libraries(chiaki "-framework AVFoundation" "-framework IOKit")
+	target_link_libraries(chiaki "-framework AVFoundation" "-framework IOKit" "-framework AppKit" "-framework ApplicationServices")
 endif()
 
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fanalyzer")
 set_target_properties(chiaki PROPERTIES
 		MACOSX_BUNDLE TRUE
 		MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/MacOSXBundleInfo.plist.in"
-		MACOSX_BUNDLE_BUNDLE_NAME chiaki-ng
+		MACOSX_BUNDLE_BUNDLE_NAME "e11 Remote Play"
 		MACOSX_BUNDLE_BUNDLE_VERSION ${CHIAKI_VERSION}
-		MACOSX_BUNDLE_COPYRIGHT "thestr4ng3r (AGPLv3)"
-		MACOSX_BUNDLE_GUI_IDENTIFIER "org.streetpea.chiaking"
+		MACOSX_BUNDLE_COPYRIGHT "e11. Based on chiaki-ng (Street Pea) and Chiaki (Florian Markl). AGPLv3."
+		MACOSX_BUNDLE_GUI_IDENTIFIER "com.e11.remoteplay"
 		MACOSX_BUNDLE_ICON_FILE chiaking.icns
 		RESOURCE "${RESOURCE_FILES}")
 

@@ -265,6 +265,10 @@ private:
     void refreshPendingFrameAge();
     void snapshotPendingFrame();
     bool handleShortcut(QKeyEvent *event);
+    void captureMouseAim();
+    void releaseMouseAim();
+    bool mouse_aim_captured = false;
+    QPointF mouse_aim_center;
     bool event(QEvent *event) override;
     QObject *focusObject() const override;
     void updateQueueDepthAverage(int depth);

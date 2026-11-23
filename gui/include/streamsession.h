@@ -35,6 +35,9 @@
 #include <QObject>
 #include <QImage>
 #include <QMouseEvent>
+#include <QWheelEvent>
+#include <QKeyEvent>
+#include <QSet>
 #include <QMutex>
 #include <QTimer>
 #include <QQueue>
@@ -95,6 +98,9 @@ class SdeckHapticsWorker;
 		bool enable_keyboard;
 		bool keyboard_controller_enabled;
 		bool mouse_touch_enabled;
+		bool mouse_aim_enabled;
+		int mouse_aim_sensitivity;
+		bool mouse_aim_invert_y;
 		bool enable_dualsense;
 		bool auto_regist;
 		float haptic_override;
@@ -229,6 +235,21 @@ class StreamSession : public QObject
 		float haptic_override;
 		bool keyboard_controller_enabled;
 		bool mouse_touch_enabled;
+		// e11 mouse aim: mouse movement -> right stick, mouse buttons -> triggers
+		bool mouse_aim_enabled;
+		bool mouse_aim_active;
+		bool mouse_aim_invert_y;
+		double mouse_aim_sensitivity;
+		double mouse_aim_acc_x, mouse_aim_acc_y;
+		double mouse_aim_out_x, mouse_aim_out_y;
+		double mouse_aim_wheel_acc;
+		ChiakiControllerState mouse_aim_state;
+		QTimer *mouse_aim_timer;
+		QElapsedTimer mouse_aim_clock;
+		QSet<int> held_stick_keys;
+		void MouseAimTick();
+		void UpdateKeyboardSticks();
+		void TapButton(uint32_t button);
 		bool dpad_regular;
 		bool dpad_regular_touch_switched;
 		uint dpad_touch_shortcut1;
@@ -371,6 +392,11 @@ class StreamSession : public QObject
 		void HandleMouseReleaseEvent(QMouseEvent *event);
 		void HandleMousePressEvent(QMouseEvent *event);
 		void HandleMouseMoveEvent(QMouseEvent *event, qreal width, qreal height);
+		bool MouseAimEnabled() const { return mouse_aim_enabled; }
+		bool MouseAimActive() const { return mouse_aim_active; }
+		void SetMouseAimActive(bool active);
+		void HandleMouseAimDelta(double dx, double dy);
+		void HandleWheelEvent(QWheelEvent *event);
 #if CHIAKI_GUI_ENABLE_SPEEX
 		bool ProcessMicFrame(int16_t *echo_buf);
 #endif

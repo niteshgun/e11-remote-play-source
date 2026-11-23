@@ -7,6 +7,7 @@
 #include <QUrl>
 #include <QKeySequence>
 #include <QCoreApplication>
+#include <algorithm>
 
 #include <chiaki/config.h>
 
@@ -994,6 +995,31 @@ bool Settings::GetMouseTouchEnabled() const
 void Settings::SetMouseTouchEnabled(bool enabled)
 {
 	settings.setValue("settings/mouse_touch_enabled", enabled);
+}
+
+bool Settings::GetMouseAimEnabled() const
+{
+	return settings.value("settings/mouse_aim_enabled", true).toBool();
+}
+void Settings::SetMouseAimEnabled(bool enabled)
+{
+	settings.setValue("settings/mouse_aim_enabled", enabled);
+}
+int Settings::GetMouseAimSensitivity() const
+{
+	return std::clamp(settings.value("settings/mouse_aim_sensitivity", 50).toInt(), 1, 100);
+}
+void Settings::SetMouseAimSensitivity(int sensitivity)
+{
+	settings.setValue("settings/mouse_aim_sensitivity", std::clamp(sensitivity, 1, 100));
+}
+bool Settings::GetMouseAimInvertY() const
+{
+	return settings.value("settings/mouse_aim_invert_y", false).toBool();
+}
+void Settings::SetMouseAimInvertY(bool invert)
+{
+	settings.setValue("settings/mouse_aim_invert_y", invert);
 }
 
 
@@ -2408,32 +2434,33 @@ QMap<int, Qt::Key> Settings::GetControllerMapping()
 	// Initialize with default values
 	QMap<int, Qt::Key> result =
 	{
-		{CHIAKI_CONTROLLER_BUTTON_CROSS     , Qt::Key::Key_Return},
-		{CHIAKI_CONTROLLER_BUTTON_MOON      , Qt::Key::Key_Backspace},
-		{CHIAKI_CONTROLLER_BUTTON_BOX       , Qt::Key::Key_Backslash},
-		{CHIAKI_CONTROLLER_BUTTON_PYRAMID   , Qt::Key::Key_C},
+		// e11: PC-shooter style defaults (GTA-friendly). Mouse aim handles R2/L2/right stick.
+		{CHIAKI_CONTROLLER_BUTTON_CROSS     , Qt::Key::Key_Shift},      // sprint (Enter also = Cross)
+		{CHIAKI_CONTROLLER_BUTTON_MOON      , Qt::Key::Key_R},          // reload / melee
+		{CHIAKI_CONTROLLER_BUTTON_BOX       , Qt::Key::Key_Space},      // jump
+		{CHIAKI_CONTROLLER_BUTTON_PYRAMID   , Qt::Key::Key_F},          // enter / exit vehicle
 		{CHIAKI_CONTROLLER_BUTTON_DPAD_LEFT , Qt::Key::Key_Left},
 		{CHIAKI_CONTROLLER_BUTTON_DPAD_RIGHT, Qt::Key::Key_Right},
 		{CHIAKI_CONTROLLER_BUTTON_DPAD_UP   , Qt::Key::Key_Up},
 		{CHIAKI_CONTROLLER_BUTTON_DPAD_DOWN , Qt::Key::Key_Down},
-		{CHIAKI_CONTROLLER_BUTTON_L1        , Qt::Key::Key_2},
-		{CHIAKI_CONTROLLER_BUTTON_R1        , Qt::Key::Key_3},
-		{CHIAKI_CONTROLLER_BUTTON_L3        , Qt::Key::Key_5},
-		{CHIAKI_CONTROLLER_BUTTON_R3        , Qt::Key::Key_6},
-		{CHIAKI_CONTROLLER_BUTTON_OPTIONS   , Qt::Key::Key_O},
-		{CHIAKI_CONTROLLER_BUTTON_SHARE     , Qt::Key::Key_F},
-		{CHIAKI_CONTROLLER_BUTTON_TOUCHPAD  , Qt::Key::Key_T},
-		{CHIAKI_CONTROLLER_BUTTON_PS        , Qt::Key::Key_Escape},
-		{CHIAKI_CONTROLLER_ANALOG_BUTTON_L2 , Qt::Key::Key_1},
-		{CHIAKI_CONTROLLER_ANALOG_BUTTON_R2 , Qt::Key::Key_4},
-		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_UP)   , Qt::Key::Key_BracketRight},
-		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_DOWN) , Qt::Key::Key_BracketLeft},
-		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_Y_UP)   , Qt::Key::Key_Insert},
-		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_Y_DOWN) , Qt::Key::Key_Delete},
-		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_RIGHT_X_UP)  , Qt::Key::Key_Equal},
-		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_RIGHT_X_DOWN), Qt::Key::Key_Minus},
-		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_RIGHT_Y_UP)  , Qt::Key::Key_PageUp},
-		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_RIGHT_Y_DOWN), Qt::Key::Key_PageDown}
+		{CHIAKI_CONTROLLER_BUTTON_L1        , Qt::Key::Key_Tab},        // weapon wheel
+		{CHIAKI_CONTROLLER_BUTTON_R1        , Qt::Key::Key_Q},          // cover
+		{CHIAKI_CONTROLLER_BUTTON_L3        , Qt::Key::Key_V},          // crouch / stealth
+		{CHIAKI_CONTROLLER_BUTTON_R3        , Qt::Key::Key_C},          // look behind / horn
+		{CHIAKI_CONTROLLER_BUTTON_OPTIONS   , Qt::Key::Key_Escape},     // pause
+		{CHIAKI_CONTROLLER_BUTTON_SHARE     , Qt::Key::Key_Backslash},  // create
+		{CHIAKI_CONTROLLER_BUTTON_TOUCHPAD  , Qt::Key::Key_M},          // map
+		{CHIAKI_CONTROLLER_BUTTON_PS        , Qt::Key::Key_P},
+		{CHIAKI_CONTROLLER_ANALOG_BUTTON_L2 , Qt::Key::Key_Z},
+		{CHIAKI_CONTROLLER_ANALOG_BUTTON_R2 , Qt::Key::Key_X},
+		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_UP)   , Qt::Key::Key_D},
+		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_DOWN) , Qt::Key::Key_A},
+		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_Y_UP)   , Qt::Key::Key_W},
+		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_Y_DOWN) , Qt::Key::Key_S},
+		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_RIGHT_X_UP)  , Qt::Key::Key_L},
+		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_RIGHT_X_DOWN), Qt::Key::Key_J},
+		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_RIGHT_Y_UP)  , Qt::Key::Key_I},
+		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_RIGHT_Y_DOWN), Qt::Key::Key_K}
 	};
 
 	// Then fill in from settings
@@ -2453,32 +2480,33 @@ void Settings::ClearKeyMapping()
 	// Initialize with default values
 	QMap<int, Qt::Key> result =
 	{
-		{CHIAKI_CONTROLLER_BUTTON_CROSS     , Qt::Key::Key_Return},
-		{CHIAKI_CONTROLLER_BUTTON_MOON      , Qt::Key::Key_Backspace},
-		{CHIAKI_CONTROLLER_BUTTON_BOX       , Qt::Key::Key_Backslash},
-		{CHIAKI_CONTROLLER_BUTTON_PYRAMID   , Qt::Key::Key_C},
+		// e11: PC-shooter style defaults (GTA-friendly). Mouse aim handles R2/L2/right stick.
+		{CHIAKI_CONTROLLER_BUTTON_CROSS     , Qt::Key::Key_Shift},      // sprint (Enter also = Cross)
+		{CHIAKI_CONTROLLER_BUTTON_MOON      , Qt::Key::Key_R},          // reload / melee
+		{CHIAKI_CONTROLLER_BUTTON_BOX       , Qt::Key::Key_Space},      // jump
+		{CHIAKI_CONTROLLER_BUTTON_PYRAMID   , Qt::Key::Key_F},          // enter / exit vehicle
 		{CHIAKI_CONTROLLER_BUTTON_DPAD_LEFT , Qt::Key::Key_Left},
 		{CHIAKI_CONTROLLER_BUTTON_DPAD_RIGHT, Qt::Key::Key_Right},
 		{CHIAKI_CONTROLLER_BUTTON_DPAD_UP   , Qt::Key::Key_Up},
 		{CHIAKI_CONTROLLER_BUTTON_DPAD_DOWN , Qt::Key::Key_Down},
-		{CHIAKI_CONTROLLER_BUTTON_L1        , Qt::Key::Key_2},
-		{CHIAKI_CONTROLLER_BUTTON_R1        , Qt::Key::Key_3},
-		{CHIAKI_CONTROLLER_BUTTON_L3        , Qt::Key::Key_5},
-		{CHIAKI_CONTROLLER_BUTTON_R3        , Qt::Key::Key_6},
-		{CHIAKI_CONTROLLER_BUTTON_OPTIONS   , Qt::Key::Key_O},
-		{CHIAKI_CONTROLLER_BUTTON_SHARE     , Qt::Key::Key_F},
-		{CHIAKI_CONTROLLER_BUTTON_TOUCHPAD  , Qt::Key::Key_T},
-		{CHIAKI_CONTROLLER_BUTTON_PS        , Qt::Key::Key_Escape},
-		{CHIAKI_CONTROLLER_ANALOG_BUTTON_L2 , Qt::Key::Key_1},
-		{CHIAKI_CONTROLLER_ANALOG_BUTTON_R2 , Qt::Key::Key_4},
-		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_UP)   , Qt::Key::Key_BracketRight},
-		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_DOWN) , Qt::Key::Key_BracketLeft},
-		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_Y_UP)   , Qt::Key::Key_Insert},
-		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_Y_DOWN) , Qt::Key::Key_Delete},
-		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_RIGHT_X_UP)  , Qt::Key::Key_Equal},
-		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_RIGHT_X_DOWN), Qt::Key::Key_Minus},
-		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_RIGHT_Y_UP)  , Qt::Key::Key_PageUp},
-		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_RIGHT_Y_DOWN), Qt::Key::Key_PageDown}
+		{CHIAKI_CONTROLLER_BUTTON_L1        , Qt::Key::Key_Tab},        // weapon wheel
+		{CHIAKI_CONTROLLER_BUTTON_R1        , Qt::Key::Key_Q},          // cover
+		{CHIAKI_CONTROLLER_BUTTON_L3        , Qt::Key::Key_V},          // crouch / stealth
+		{CHIAKI_CONTROLLER_BUTTON_R3        , Qt::Key::Key_C},          // look behind / horn
+		{CHIAKI_CONTROLLER_BUTTON_OPTIONS   , Qt::Key::Key_Escape},     // pause
+		{CHIAKI_CONTROLLER_BUTTON_SHARE     , Qt::Key::Key_Backslash},  // create
+		{CHIAKI_CONTROLLER_BUTTON_TOUCHPAD  , Qt::Key::Key_M},          // map
+		{CHIAKI_CONTROLLER_BUTTON_PS        , Qt::Key::Key_P},
+		{CHIAKI_CONTROLLER_ANALOG_BUTTON_L2 , Qt::Key::Key_Z},
+		{CHIAKI_CONTROLLER_ANALOG_BUTTON_R2 , Qt::Key::Key_X},
+		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_UP)   , Qt::Key::Key_D},
+		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_X_DOWN) , Qt::Key::Key_A},
+		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_Y_UP)   , Qt::Key::Key_W},
+		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_LEFT_Y_DOWN) , Qt::Key::Key_S},
+		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_RIGHT_X_UP)  , Qt::Key::Key_L},
+		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_RIGHT_X_DOWN), Qt::Key::Key_J},
+		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_RIGHT_Y_UP)  , Qt::Key::Key_I},
+		{static_cast<int>(ControllerButtonExt::ANALOG_STICK_RIGHT_Y_DOWN), Qt::Key::Key_K}
 	};
 
 	// Then fill in from settings
