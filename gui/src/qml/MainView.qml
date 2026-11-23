@@ -422,7 +422,10 @@ Pane {
         id: logoImage
         anchors.centerIn: parent
         source: "qrc:/icons/chiaking-logo-white.svg"
-        sourceSize: Qt.size(Math.min(parent.width, parent.height) / 2, Math.min(parent.width, parent.height) / 2)
+        width: Math.min(parent.width, parent.height) / 2
+        height: width
+        fillMode: Image.PreserveAspectFit
+        sourceSize.width: width * 2
 
         PropertyAnimation {
             target: logoImage
@@ -520,8 +523,9 @@ Pane {
                     }
                 }
             }
-            // One click (or Space) pulls the controller from the PS5 over to this Mac
+            // One click (or Space) pulls the controller from the PS5 over to this Mac (macOS only)
             RowLayout {
+                visible: Qt.platform.os === "osx"
                 Layout.fillWidth: true
                 Button {
                     id: toMacButton
@@ -541,7 +545,7 @@ Pane {
             Shortcut {
                 sequence: "Space"
                 context: Qt.WindowShortcut
-                enabled: !Chiaki.session
+                enabled: !Chiaki.session && Qt.platform.os === "osx"
                 onActivated: switchStatus.text = Chiaki.window.controllerToMac()
             }
             // e11: Smooth play checklist. Bluetooth + AirDrop/Handoff share the Mac's Wi-Fi radio and cause lag spikes.
@@ -557,9 +561,9 @@ Pane {
                 }
                 Label { font.pixelSize: 12; color: controllerCard.anyWired ? "#5ad17a" : "#ffd9a8"
                         text: (controllerCard.anyWired ? "✓" : "⚠") + qsTr(" USB-C") }
-                Label { font.pixelSize: 12; color: controllerCard.smoothState.bluetoothOn ? "#ffd9a8" : "#5ad17a"
+                Label { visible: Qt.platform.os === "osx"; font.pixelSize: 12; color: controllerCard.smoothState.bluetoothOn ? "#ffd9a8" : "#5ad17a"
                         text: controllerCard.smoothState.bluetoothOn ? qsTr("⚠ Bluetooth") : qsTr("✓ Bluetooth off") }
-                Label { font.pixelSize: 12
+                Label { visible: Qt.platform.os === "osx"; font.pixelSize: 12
                         readonly property bool on: controllerCard.smoothState.airdropOn || controllerCard.smoothState.handoffOn
                         color: on ? "#ffd9a8" : "#5ad17a"
                         text: on ? qsTr("⚠ AirDrop/Handoff") : qsTr("✓ AirDrop/Handoff off") }
@@ -606,6 +610,7 @@ Pane {
                     ]
                     delegate: RowLayout {
                         required property var modelData
+                        visible: Qt.platform.os === "osx" || modelData.b === ""
                         Layout.fillWidth: true
                         spacing: 10
                         Label { text: modelData.ok ? "✓" : "⚠"; color: modelData.ok ? "#5ad17a" : "#ffd9a8"; font.pixelSize: 18; Layout.alignment: Qt.AlignTop }
@@ -626,6 +631,7 @@ Pane {
                 Label {
                     Layout.fillWidth: true; wrapMode: Text.WordWrap; color: Qt.rgba(1, 1, 1, 0.5); font.pixelSize: 11
                     text: qsTr("Game Mode turns on by itself in full screen and doubles Bluetooth polling. With Bluetooth off it doesn't matter.")
+                    visible: Qt.platform.os === "osx"
                 }
                 Button { text: qsTr("Got it"); highlighted: true; Layout.alignment: Qt.AlignRight; onClicked: smoothPopup.close() }
             }
