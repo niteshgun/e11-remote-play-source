@@ -783,6 +783,74 @@ ChiakiControllerState Controller::GetState()
 	return state;
 }
 
+QString Controller::GetKind()
+{
+#ifdef CHIAKI_GUI_ENABLE_SDL_GAMECONTROLLER
+	if(!controller)
+		return "other";
+	if(IsDualSenseEdge())
+		return "ps5edge";
+	switch(SDL_GameControllerGetType(controller))
+	{
+		case SDL_CONTROLLER_TYPE_PS5: return "ps5";
+		case SDL_CONTROLLER_TYPE_PS4: return "ps4";
+		case SDL_CONTROLLER_TYPE_PS3: return "ps3";
+		case SDL_CONTROLLER_TYPE_XBOX360:
+		case SDL_CONTROLLER_TYPE_XBOXONE: return "xbox";
+		case SDL_CONTROLLER_TYPE_NINTENDO_SWITCH_PRO: return "switch";
+		default: return IsDualSense() ? "ps5" : "other";
+	}
+#else
+	return "other";
+#endif
+}
+
+QString Controller::GetFriendlyName()
+{
+	const QString kind = GetKind();
+	if(kind == "ps5edge") return "DualSense Edge";
+	if(kind == "ps5") return "DualSense";
+	if(kind == "ps4") return "DualShock 4";
+	if(kind == "ps3") return "DualShock 3";
+	if(kind == "xbox") return "Xbox Controller";
+	if(kind == "switch") return "Switch Pro Controller";
+	const QString n = GetType();
+	return n.isEmpty() ? QStringLiteral("Controller") : n;
+}
+
+bool Controller::IsWired()
+{
+#ifdef CHIAKI_GUI_ENABLE_SDL_GAMECONTROLLER
+	if(!controller)
+		return false;
+	SDL_Joystick *joystick = SDL_GameControllerGetJoystick(controller);
+	return joystick && SDL_JoystickCurrentPowerLevel(joystick) == SDL_JOYSTICK_POWER_WIRED;
+#else
+	return false;
+#endif
+}
+
+int Controller::GetBatteryPercent()
+{
+#ifdef CHIAKI_GUI_ENABLE_SDL_GAMECONTROLLER
+	if(!controller)
+		return -1;
+	SDL_Joystick *joystick = SDL_GameControllerGetJoystick(controller);
+	if(!joystick)
+		return -1;
+	switch(SDL_JoystickCurrentPowerLevel(joystick))
+	{
+		case SDL_JOYSTICK_POWER_EMPTY: return 5;
+		case SDL_JOYSTICK_POWER_LOW: return 20;
+		case SDL_JOYSTICK_POWER_MEDIUM: return 60;
+		case SDL_JOYSTICK_POWER_FULL: return 100;
+		default: return -1;
+	}
+#else
+	return -1;
+#endif
+}
+
 bool Controller::IsWireless()
 {
 #ifdef CHIAKI_GUI_ENABLE_SDL_GAMECONTROLLER

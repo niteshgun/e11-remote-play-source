@@ -23,6 +23,11 @@ public:
     bool isDualSenseEdge() const;
     bool isPS() const;
     void setEscapeShortcut(uint32_t shortcut) { escape_shortcut = shortcut; };
+    // e11: live info for the UI (polled; battery/connection can change)
+    Q_INVOKABLE QString friendlyName() const;
+    Q_INVOKABLE QString kind() const;
+    Q_INVOKABLE bool wired() const;
+    Q_INVOKABLE int batteryPercent() const;
     QString GetGUID() const;
     QString GetVIDPID() const;
 

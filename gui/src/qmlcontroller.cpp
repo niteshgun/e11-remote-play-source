@@ -89,6 +89,11 @@ bool QmlController::isHandheld() const
     return controller->IsHandheld();
 }
 
+QString QmlController::friendlyName() const { return controller->GetFriendlyName(); }
+QString QmlController::kind() const { return controller->GetKind(); }
+bool QmlController::wired() const { return controller->IsWired(); }
+int QmlController::batteryPercent() const { return controller->GetBatteryPercent(); }
+
 bool QmlController::isPS() const
 {
     return controller->IsPS();

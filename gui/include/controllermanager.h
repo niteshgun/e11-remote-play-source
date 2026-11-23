@@ -144,6 +144,11 @@ class Controller : public QObject
 		bool IsSteamVirtualUnmasked();
 		bool IsDualSenseEdge();
 		bool IsWireless();
+		// e11: friendly info for the UI
+		QString GetKind();           // ps5, ps5edge, ps4, ps3, xbox, switch, other
+		QString GetFriendlyName();   // "DualSense", "Xbox Controller", ...
+		bool IsWired();              // powered over a cable (USB)
+		int GetBatteryPercent();     // -1 if unknown / wired
 		void resetMotionControls();
 
 	signals:

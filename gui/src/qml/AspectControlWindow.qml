@@ -92,6 +92,27 @@ Window {
             expanded = false;
     }
 
+    // ---------- controllers ----------
+    property int controllerTick: 0   // bumps every 2 s so battery / connection refresh
+    Timer { interval: 2000; repeat: true; running: quickWindow.visible; onTriggered: quickWindow.controllerTick++ }
+    function controllerLine(c) {
+        controllerTick; // dependency for refresh
+        let parts = [c.friendlyName(), c.wired() ? qsTr("USB") : qsTr("Bluetooth")];
+        let b = c.batteryPercent();
+        if (!c.wired() && b >= 0)
+            parts.push(b + "%");
+        return parts.join(" · ");
+    }
+    readonly property bool psControllerOnUsb: {
+        controllerTick;
+        for (let i = 0; i < Chiaki.controllers.length; i++) {
+            let k = Chiaki.controllers[i].kind();
+            if ((k === "ps5" || k === "ps5edge" || k === "ps4") && Chiaki.controllers[i].wired())
+                return true;
+        }
+        return false;
+    }
+
     // ---------- picture ----------
     function setMode(mode) {
         // Stretch should cover the whole screen, title-bar area included
@@ -368,6 +389,13 @@ Window {
                 onClicked: quickWindow.setMode(ChiakiWindow.VideoMode.Stretch)
             }
             Chip {
+                visible: !quickWindow.collapsed && Chiaki.controllers.length > 0
+                text: "🎮 " + (Chiaki.controllers.length ? quickWindow.controllerLine(Chiaki.controllers[0]) : "")
+                tip: Chiaki.controllers.length > 1 ? qsTr("%1 controllers connected").arg(Chiaki.controllers.length)
+                                                   : qsTr("Controller connected")
+                onClicked: quickWindow.expanded = true
+            }
+            Chip {
                 visible: !quickWindow.collapsed
                 text: "⚙"
                 tip: qsTr("Quick menu: bitrate, performance, colour")
@@ -527,6 +555,43 @@ Window {
                     value: prefs.customGrain
                     valueText: Math.round(value * 100)
                     onMoved: { prefs.customGrain = value; quickWindow.applyColor(); }
+                }
+            }
+
+            // ----- Controller -----
+            SectionTitle { text: qsTr("Controller") }
+            Label {
+                visible: Chiaki.controllers.length === 0
+                text: qsTr("No controller connected · keyboard and mouse work too")
+                font.pixelSize: 12
+                color: Qt.rgba(1, 1, 1, 0.7)
+            }
+            Repeater {
+                model: Chiaki.controllers
+                delegate: Label {
+                    required property var modelData
+                    text: "🎮  " + quickWindow.controllerLine(modelData) + qsTr("  ·  connected")
+                    font.pixelSize: 13
+                    color: "white"
+                }
+            }
+            Rectangle {
+                visible: quickWindow.psControllerOnUsb
+                Layout.fillWidth: true
+                implicitHeight: usbTip.implicitHeight + 16
+                radius: 8
+                color: Qt.rgba(1.0, 0.65, 0.2, 0.14)
+                border.color: Qt.rgba(1.0, 0.65, 0.2, 0.45)
+                Label {
+                    id: usbTip
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: 11
+                    color: "#ffd9a8"
+                    text: qsTr("Inputs doubled or jumpy? Your PS5 may still be using this controller over Bluetooth. "
+                             + "Fix once on the PS5: Settings → Accessories → Controller (General) → "
+                             + "Communication Method → Use USB Cable.")
                 }
             }
 
