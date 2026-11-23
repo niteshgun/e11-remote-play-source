@@ -5,6 +5,12 @@
 // Lighting passes work at quarter resolution: bright-pass -> blur H -> blur V (bloom), and a
 // radial blur of the bright-pass toward the upper middle of the frame (light shafts).
 
+//!PARAM shadows
+//!TYPE DYNAMIC float
+//!MINIMUM 0.0
+//!MAXIMUM 2.0
+0.0
+
 //!PARAM bloom
 //!TYPE DYNAMIC float
 //!MINIMUM 0.0
@@ -142,6 +148,14 @@ vec4 hook()
     vec4 c = HOOKED_texOff(vec2(0.0));
     vec3 col = c.rgb;
     const vec3 W = vec3(0.2126, 0.7152, 0.0722);
+
+    // Shadow detail: lifts dark and lower-mid tones (like a photo editor's Shadows slider).
+    // Pure black stays black and highlights are untouched; colour is preserved by scaling RGB.
+    if (shadows > 0.0) {
+        float l = max(dot(clamp(col, 0.0, 1.0), W), 1e-4);
+        float lifted = l + shadows * 0.55 * l * pow(1.0 - l, 3.0);
+        col *= lifted / l;
+    }
 
     // Bloom + light shafts: screen-blend the glow so highlights never clip harshly
     if (bloom > 0.0 || rays > 0.0) {

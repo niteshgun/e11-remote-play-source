@@ -2799,6 +2799,12 @@ QString QmlMainWindow::neuralUpscaleStatus() const
 #endif
 }
 
+void QmlMainWindow::setShadowDetail(float shadows)
+{
+    fx_shadows.store(std::clamp(shadows, 0.0f, 2.0f), std::memory_order_relaxed);
+    requestOverlayUpdate();
+}
+
 void QmlMainWindow::setLightEffects(float bloom, float rays)
 {
     fx_bloom.store(std::clamp(bloom, 0.0f, 2.0f), std::memory_order_relaxed);
@@ -7685,11 +7691,12 @@ void QmlMainWindow::render()
             fx_vibrance.load(std::memory_order_relaxed), fx_split.load(std::memory_order_relaxed),
             fx_vignette.load(std::memory_order_relaxed), fx_grain.load(std::memory_order_relaxed),
             fx_bloom.load(std::memory_order_relaxed), fx_rays.load(std::memory_order_relaxed),
+            fx_shadows.load(std::memory_order_relaxed),
         };
-        static const char *const fx_names[] = {"sharpen", "clarity", "vibrance", "split", "vignette", "grain", "bloom", "rays"};
+        static const char *const fx_names[] = {"sharpen", "clarity", "vibrance", "split", "vignette", "grain", "bloom", "rays", "shadows"};
         bool any = false;
         for (int p = 0; p < looks_hook->num_parameters; p++) {
-            for (int k = 0; k < 8; k++) {
+            for (int k = 0; k < 9; k++) {
                 if (qstrcmp(looks_hook->parameters[p].name, fx_names[k]) == 0) {
                     looks_hook->parameters[p].data->f = fx[k];
                     any = any || fx[k] > 0.0f;

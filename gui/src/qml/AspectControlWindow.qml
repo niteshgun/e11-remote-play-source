@@ -45,6 +45,8 @@ Window {
         property real customGrain: 0.0
         property real customBloom: 0.0
         property real customRays: 0.0
+        // Mac display: lift dark tones on top of any look (MacBook panels crush shadows vs a TV)
+        property real shadowDetail: 0.6
     }
 
     visible: shown
@@ -147,6 +149,7 @@ Window {
         Chiaki.window.setColorAdjust(v.b, v.c, v.s, v.t);
         Chiaki.window.setPhotoEffects(v.sh, v.cl, v.vb, v.sp, v.vg, v.gr);
         Chiaki.window.setLightEffects(v.bl, v.ry);
+        Chiaki.window.setShadowDetail(prefs.shadowDetail);
     }
     function customLookValues() {
         return { b: prefs.customBrightness, c: prefs.customContrast, s: prefs.customSaturation, t: prefs.customWarmth,
@@ -498,6 +501,13 @@ Window {
 
             // ----- Looks -----
             SectionTitle { text: qsTr("Look (Retina display)") }
+            SliderRow {
+                text: qsTr("Shadow detail")
+                from: 0.0; to: 2.0; stepSize: 0.05
+                value: prefs.shadowDetail
+                valueText: Math.round(value * 100)
+                onMoved: { prefs.shadowDetail = value; Chiaki.window.setShadowDetail(value); }
+            }
             Flow {
                 Layout.fillWidth: true
                 spacing: 4
