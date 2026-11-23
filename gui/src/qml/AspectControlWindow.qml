@@ -29,7 +29,7 @@ Window {
         property bool autoBitrate: true
         property int manualBitrateMbps: 30
         // Performance
-        property bool autoPerformance: true
+        property bool autoPerformance2: true
         // Look: -1 = follow "Retina Vivid Colors" setting; otherwise index into lookPresets,
         // lookPresets.length = Custom
         property int colorPreset: -1
@@ -163,33 +163,14 @@ Window {
     // ---------- looks (colour + photo effects) ----------
     // b brightness, c contrast, s saturation, t temperature (negative = warmer),
     // then GPU photo effects: sh sharpen, cl clarity, vb vibrance, sp teal/orange, vg vignette, gr grain
+    // e11: one look only, "Game". Colour work is done by libplacebo for free; the only shader
+    // pass left is a single cheap shadow lift (no bloom/rays/blur passes), so it costs ~nothing.
     readonly property var lookPresets: [
-        { name: qsTr("Natural"), tip: qsTr("As the game was graded"),
-          b: 0.00, c: 1.00, s: 1.00, t: 0.00,  sh: 0.0, cl: 0.0, vb: 0.0, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0, ry: 0, sd: 0.35 },
-        { name: qsTr("Game"), tip: qsTr("Punchy and bright"),
-          b: 0.03, c: 1.10, s: 1.20, t: 0.03,  sh: 0.0, cl: 0.0, vb: 0.0, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0, ry: 0, sd: 0.6 },
-        { name: qsTr("Game+"), tip: qsTr("Game look, crisper and deeper"),
-          b: 0.03, c: 1.12, s: 1.22, t: 0.03,  sh: 0.35, cl: 0.35, vb: 0.2, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0.25, ry: 0, sd: 0.7 },
-        { name: qsTr("Vivid"), tip: qsTr("Rich P3 colour, sharper"),
-          b: 0.01, c: 1.14, s: 1.35, t: 0.00,  sh: 0.3, cl: 0.2, vb: 0.45, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0.3, ry: 0, sd: 0.6 },
-        { name: qsTr("DSLR"), tip: qsTr("Photo look: clarity, vibrance, light vignette"),
-          b: 0.00, c: 1.10, s: 1.08, t: -0.03, sh: 0.45, cl: 0.7, vb: 0.5, sp: 0.15, vg: 0.35, gr: 0.0, bl: 0.25, ry: 0, sd: 0.7 },
-        { name: qsTr("HDR Pop"), tip: qsTr("Big local contrast, very crisp"),
-          b: -0.02, c: 1.18, s: 1.25, t: 0.00, sh: 0.55, cl: 1.0, vb: 0.4, sp: 0.0, vg: 0.15, gr: 0.0, bl: 0.45, ry: 0.2, sd: 0.9 },
-        { name: qsTr("Cinema"), tip: qsTr("Warm film grade, vignette and grain"),
-          b: -0.03, c: 1.15, s: 0.92, t: -0.15, sh: 0.15, cl: 0.3, vb: 0.0, sp: 0.6, vg: 0.55, gr: 0.25, bl: 0.5, ry: 0.3, sd: 0.45 },
-        { name: qsTr("Blockbuster"), tip: qsTr("Teal shadows, orange highlights"),
-          b: -0.01, c: 1.15, s: 1.05, t: -0.04, sh: 0.25, cl: 0.4, vb: 0.2, sp: 1.2, vg: 0.4, gr: 0.1, bl: 0.55, ry: 0.35, sd: 0.55 },
-        { name: qsTr("Vice Sunset"), tip: qsTr("Warm, glowing, saturated"),
-          b: 0.02, c: 1.08, s: 1.30, t: -0.25, sh: 0.2, cl: 0.2, vb: 0.4, sp: 0.35, vg: 0.3, gr: 0.0, bl: 0.7, ry: 0.6, sd: 0.5 },
-        { name: qsTr("Night"), tip: qsTr("Cool, moody, deep blacks"),
-          b: -0.04, c: 1.20, s: 1.05, t: 0.20,  sh: 0.25, cl: 0.4, vb: 0.25, sp: 0.0, vg: 0.5, gr: 0.1, bl: 0.6, ry: 0.15, sd: 1.1 },
-        { name: qsTr("Noir"), tip: qsTr("Black and white film"),
-          b: 0.00, c: 1.28, s: 0.00, t: 0.00,  sh: 0.3, cl: 0.6, vb: 0.0, sp: 0.0, vg: 0.6, gr: 0.35, bl: 0.3, ry: 0.2, sd: 0.5 }
+        { name: qsTr("Game"), tip: "",
+          b: 0.03, c: 1.10, s: 1.20, t: 0.03,  sh: 0.0, cl: 0.0, vb: 0.0, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0, ry: 0, sd: 0.6 }
     ]
     readonly property int customLook: lookPresets.length
-    readonly property int effectivePreset: prefs.colorPreset >= 0 ? prefs.colorPreset
-                                         : (Chiaki.settings.retinaVivid ? 1 : 0)
+    readonly property int effectivePreset: 0
 
     function applyLook(v) {
         Chiaki.window.setColorAdjust(v.b, v.c, v.s, v.t);
@@ -233,7 +214,7 @@ Window {
 
     // Best level this Mac should handle comfortably at 1080p60
     function chipMaxLevel() {
-        return 2; // smoothness first: auto never goes above "High" (pick Sharp/Ultra by hand)
+        return 1; // smoothness first: auto starts at "Balanced" and drops to "Fast" if frames drop
         let c = chip.toUpperCase();
         if (/M[3-9]/.test(c) || c.indexOf("PRO") >= 0 || c.indexOf("MAX") >= 0 || c.indexOf("ULTRA") >= 0)
             return 4; // newer / bigger GPUs: neural upscaling
@@ -260,7 +241,7 @@ Window {
             maxLevel = quickWindow.chipMaxLevel();
             badSeconds = 0;
             goodSeconds = 0;
-            if (prefs.autoPerformance)
+            if (prefs.autoPerformance2)
                 quickWindow.setLevel(maxLevel);
             perfTimer.start();
         }
@@ -273,7 +254,7 @@ Window {
         interval: 1000
         repeat: true
         onTriggered: {
-            if (!prefs.autoPerformance) {
+            if (!prefs.autoPerformance2) {
                 perf.status = "";
                 return;
             }
@@ -286,7 +267,7 @@ Window {
                 perf.badSeconds = 0;
             }
             let lvl = quickWindow.currentLevel();
-            if (perf.badSeconds >= 3 && lvl > 1) {
+            if (perf.badSeconds >= 3 && lvl > 0) {
                 quickWindow.setLevel(lvl - 1);
                 perf.badSeconds = 0;
                 perf.status = qsTr("Lowered quality to keep it smooth");
@@ -482,7 +463,13 @@ Window {
                     // ----- Looks -----
                     SectionTitle { text: qsTr("Look") }
 
+                    Label {
+                        text: qsTr("Game  ✓  (tuned for Mac screens)")
+                        color: "white"
+                        font.pixelSize: 13
+                    }
                     Flow {
+                        visible: false
                         Layout.fillWidth: true
                         spacing: 4
                         Repeater {
@@ -497,7 +484,7 @@ Window {
                         }
                     }
                     ColumnLayout {
-                        visible: quickWindow.effectivePreset === quickWindow.customLook
+                        visible: false
                         Layout.fillWidth: true
                         spacing: 0
                         SliderRow {
@@ -747,9 +734,9 @@ Window {
                         SectionTitle { text: qsTr("Performance") }
                         Toggle {
                             text: qsTr("Auto (best quality this Mac can hold)")
-                            checked: prefs.autoPerformance
+                            checked: prefs.autoPerformance2
                             onToggled: {
-                                prefs.autoPerformance = checked;
+                                prefs.autoPerformance2 = checked;
                                 if (checked)
                                     perf.start();
                             }
@@ -768,7 +755,7 @@ Window {
                                           qsTr("High quality + FSR sharpening for Retina"),
                                           qsTr("High quality + neural upscaling (FSRCNNX on the GPU)")][index]
                                     onClicked: {
-                                        prefs.autoPerformance = false;
+                                        prefs.autoPerformance2 = false;
                                         quickWindow.setLevel(index);
                                         Chiaki.settings.videoPreset = index;
                                     }
@@ -776,7 +763,7 @@ Window {
                             }
                         }
                         Label {
-                            visible: prefs.autoPerformance && perf.status !== ""
+                            visible: prefs.autoPerformance2 && perf.status !== ""
                             text: perf.status
                             font.pixelSize: 11
                             color: Qt.rgba(1, 1, 1, 0.6)
