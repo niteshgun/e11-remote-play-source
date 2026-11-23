@@ -45,8 +45,8 @@ Window {
         property real customGrain: 0.0
         property real customBloom: 0.0
         property real customRays: 0.0
-        // Mac display: lift dark tones on top of any look (MacBook panels crush shadows vs a TV)
-        property real shadowDetail: 0.6
+        property real customShadows: 0.6
+        property bool advancedOpen: false
     }
 
     visible: shown
@@ -119,27 +119,27 @@ Window {
     // then GPU photo effects: sh sharpen, cl clarity, vb vibrance, sp teal/orange, vg vignette, gr grain
     readonly property var lookPresets: [
         { name: qsTr("Natural"), tip: qsTr("As the game was graded"),
-          b: 0.00, c: 1.00, s: 1.00, t: 0.00,  sh: 0.0, cl: 0.0, vb: 0.0, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0, ry: 0 },
+          b: 0.00, c: 1.00, s: 1.00, t: 0.00,  sh: 0.0, cl: 0.0, vb: 0.0, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0, ry: 0, sd: 0.35 },
         { name: qsTr("Game"), tip: qsTr("Punchy and bright"),
-          b: 0.03, c: 1.10, s: 1.20, t: 0.03,  sh: 0.0, cl: 0.0, vb: 0.0, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0, ry: 0 },
+          b: 0.03, c: 1.10, s: 1.20, t: 0.03,  sh: 0.0, cl: 0.0, vb: 0.0, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0, ry: 0, sd: 0.6 },
         { name: qsTr("Game+"), tip: qsTr("Game look, crisper and deeper"),
-          b: 0.03, c: 1.12, s: 1.22, t: 0.03,  sh: 0.35, cl: 0.35, vb: 0.2, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0.25, ry: 0 },
+          b: 0.03, c: 1.12, s: 1.22, t: 0.03,  sh: 0.35, cl: 0.35, vb: 0.2, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0.25, ry: 0, sd: 0.7 },
         { name: qsTr("Vivid"), tip: qsTr("Rich P3 colour, sharper"),
-          b: 0.01, c: 1.14, s: 1.35, t: 0.00,  sh: 0.3, cl: 0.2, vb: 0.45, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0.3, ry: 0 },
+          b: 0.01, c: 1.14, s: 1.35, t: 0.00,  sh: 0.3, cl: 0.2, vb: 0.45, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0.3, ry: 0, sd: 0.6 },
         { name: qsTr("DSLR"), tip: qsTr("Photo look: clarity, vibrance, light vignette"),
-          b: 0.00, c: 1.10, s: 1.08, t: -0.03, sh: 0.45, cl: 0.7, vb: 0.5, sp: 0.15, vg: 0.35, gr: 0.0, bl: 0.25, ry: 0 },
+          b: 0.00, c: 1.10, s: 1.08, t: -0.03, sh: 0.45, cl: 0.7, vb: 0.5, sp: 0.15, vg: 0.35, gr: 0.0, bl: 0.25, ry: 0, sd: 0.7 },
         { name: qsTr("HDR Pop"), tip: qsTr("Big local contrast, very crisp"),
-          b: -0.02, c: 1.18, s: 1.25, t: 0.00, sh: 0.55, cl: 1.0, vb: 0.4, sp: 0.0, vg: 0.15, gr: 0.0, bl: 0.45, ry: 0.2 },
+          b: -0.02, c: 1.18, s: 1.25, t: 0.00, sh: 0.55, cl: 1.0, vb: 0.4, sp: 0.0, vg: 0.15, gr: 0.0, bl: 0.45, ry: 0.2, sd: 0.9 },
         { name: qsTr("Cinema"), tip: qsTr("Warm film grade, vignette and grain"),
-          b: -0.03, c: 1.15, s: 0.92, t: -0.15, sh: 0.15, cl: 0.3, vb: 0.0, sp: 0.6, vg: 0.55, gr: 0.25, bl: 0.5, ry: 0.3 },
+          b: -0.03, c: 1.15, s: 0.92, t: -0.15, sh: 0.15, cl: 0.3, vb: 0.0, sp: 0.6, vg: 0.55, gr: 0.25, bl: 0.5, ry: 0.3, sd: 0.45 },
         { name: qsTr("Blockbuster"), tip: qsTr("Teal shadows, orange highlights"),
-          b: -0.01, c: 1.15, s: 1.05, t: -0.04, sh: 0.25, cl: 0.4, vb: 0.2, sp: 1.2, vg: 0.4, gr: 0.1, bl: 0.55, ry: 0.35 },
+          b: -0.01, c: 1.15, s: 1.05, t: -0.04, sh: 0.25, cl: 0.4, vb: 0.2, sp: 1.2, vg: 0.4, gr: 0.1, bl: 0.55, ry: 0.35, sd: 0.55 },
         { name: qsTr("Vice Sunset"), tip: qsTr("Warm, glowing, saturated"),
-          b: 0.02, c: 1.08, s: 1.30, t: -0.25, sh: 0.2, cl: 0.2, vb: 0.4, sp: 0.35, vg: 0.3, gr: 0.0, bl: 0.7, ry: 0.6 },
+          b: 0.02, c: 1.08, s: 1.30, t: -0.25, sh: 0.2, cl: 0.2, vb: 0.4, sp: 0.35, vg: 0.3, gr: 0.0, bl: 0.7, ry: 0.6, sd: 0.5 },
         { name: qsTr("Night"), tip: qsTr("Cool, moody, deep blacks"),
-          b: -0.04, c: 1.20, s: 1.05, t: 0.20,  sh: 0.25, cl: 0.4, vb: 0.25, sp: 0.0, vg: 0.5, gr: 0.1, bl: 0.6, ry: 0.15 },
+          b: -0.04, c: 1.20, s: 1.05, t: 0.20,  sh: 0.25, cl: 0.4, vb: 0.25, sp: 0.0, vg: 0.5, gr: 0.1, bl: 0.6, ry: 0.15, sd: 1.1 },
         { name: qsTr("Noir"), tip: qsTr("Black and white film"),
-          b: 0.00, c: 1.28, s: 0.00, t: 0.00,  sh: 0.3, cl: 0.6, vb: 0.0, sp: 0.0, vg: 0.6, gr: 0.35, bl: 0.3, ry: 0.2 }
+          b: 0.00, c: 1.28, s: 0.00, t: 0.00,  sh: 0.3, cl: 0.6, vb: 0.0, sp: 0.0, vg: 0.6, gr: 0.35, bl: 0.3, ry: 0.2, sd: 0.5 }
     ]
     readonly property int customLook: lookPresets.length
     readonly property int effectivePreset: prefs.colorPreset >= 0 ? prefs.colorPreset
@@ -149,13 +149,14 @@ Window {
         Chiaki.window.setColorAdjust(v.b, v.c, v.s, v.t);
         Chiaki.window.setPhotoEffects(v.sh, v.cl, v.vb, v.sp, v.vg, v.gr);
         Chiaki.window.setLightEffects(v.bl, v.ry);
-        Chiaki.window.setShadowDetail(prefs.shadowDetail);
+        // MacBook panels crush shadows compared with a TV, so every look lifts dark tones a bit
+        Chiaki.window.setShadowDetail(v.sd);
     }
     function customLookValues() {
         return { b: prefs.customBrightness, c: prefs.customContrast, s: prefs.customSaturation, t: prefs.customWarmth,
                  sh: prefs.customSharpen, cl: prefs.customClarity, vb: prefs.customVibrance,
                  sp: prefs.customSplit, vg: prefs.customVignette, gr: prefs.customGrain,
-                 bl: prefs.customBloom, ry: prefs.customRays };
+                 bl: prefs.customBloom, ry: prefs.customRays, sd: prefs.customShadows };
     }
     function applyColor() {
         let p = effectivePreset;
@@ -169,7 +170,7 @@ Window {
             prefs.customSaturation = v.s; prefs.customWarmth = v.t;
             prefs.customSharpen = v.sh; prefs.customClarity = v.cl; prefs.customVibrance = v.vb;
             prefs.customSplit = v.sp; prefs.customVignette = v.vg; prefs.customGrain = v.gr;
-            prefs.customBloom = v.bl; prefs.customRays = v.ry;
+            prefs.customBloom = v.bl; prefs.customRays = v.ry; prefs.customShadows = v.sd;
         }
         prefs.colorPreset = p;
         applyColor();
@@ -413,101 +414,9 @@ Window {
                       .arg(quickWindow.chip)
             }
 
-            // ----- Stream -----
-            SectionTitle { text: qsTr("Stream bitrate") }
-            Toggle {
-                text: qsTr("Auto (PS5 adapts to your network)")
-                checked: prefs.autoBitrate
-                onToggled: { prefs.autoBitrate = checked; quickWindow.applyBitratePolicy(); }
-            }
-            SliderRow {
-                visible: !prefs.autoBitrate
-                text: qsTr("Manual")
-                from: 5; to: 100; stepSize: 1
-                value: prefs.manualBitrateMbps
-                valueText: value + " Mbps"
-                onMoved: { prefs.manualBitrateMbps = value; quickWindow.applyBitratePolicy(); }
-            }
-            Label {
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                font.pixelSize: 11
-                color: Qt.rgba(1, 1, 1, 0.5)
-                text: qsTr("Bitrate is set when the stream starts; changes apply next time you connect.")
-            }
-
-            // ----- Performance -----
-            SectionTitle { text: qsTr("Performance") }
-            Toggle {
-                text: qsTr("Auto (best quality this Mac can hold)")
-                checked: prefs.autoPerformance
-                onToggled: {
-                    prefs.autoPerformance = checked;
-                    if (checked)
-                        perf.start();
-                }
-            }
-            Flow {
-                Layout.fillWidth: true
-                spacing: 4
-                Repeater {
-                    model: quickWindow.qualityNames
-                    delegate: Chip {
-                        required property int index
-                        required property string modelData
-                        text: modelData
-                        selected: quickWindow.currentLevel() === index
-                        tip: [qsTr("Lowest GPU use"), qsTr("Good quality, light"), qsTr("High quality scaling"),
-                              qsTr("High quality + FSR sharpening for Retina"),
-                              qsTr("High quality + neural upscaling (FSRCNNX on the GPU)")][index]
-                        onClicked: {
-                            prefs.autoPerformance = false;
-                            quickWindow.setLevel(index);
-                            Chiaki.settings.videoPreset = index;
-                        }
-                    }
-                }
-            }
-            Label {
-                visible: prefs.autoPerformance && perf.status !== ""
-                text: perf.status
-                font.pixelSize: 11
-                color: Qt.rgba(1, 1, 1, 0.6)
-            }
-            Toggle {
-                text: qsTr("Neural Engine upscaling (Apple ML)")
-                enabled: Chiaki.window.neuralUpscaleAvailable()
-                checked: Chiaki.settings.neuralUpscale && enabled
-                onToggled: Chiaki.settings.neuralUpscale = checked
-            }
-            Label {
-                id: neuralStatus
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                font.pixelSize: 11
-                color: Qt.rgba(1, 1, 1, 0.55)
-                text: Chiaki.window.neuralUpscaleStatus()
-                Timer {
-                    interval: 1000; repeat: true
-                    running: quickWindow.expanded && quickWindow.visible
-                    onTriggered: neuralStatus.text = Chiaki.window.neuralUpscaleStatus()
-                }
-            }
-            Toggle {
-                text: qsTr("V-Sync (no tearing, slightly more latency)")
-                checked: Chiaki.settings.vSyncEnabled
-                onToggled: Chiaki.settings.vSyncEnabled = checked
-            }
-
             // ----- Looks -----
-            SectionTitle { text: qsTr("Look (Retina display)") }
-            SliderRow {
-                text: qsTr("Shadow detail")
-                from: 0.0; to: 2.0; stepSize: 0.05
-                value: prefs.shadowDetail
-                valueText: Math.round(value * 100)
-                onMoved: { prefs.shadowDetail = value; Chiaki.window.setShadowDetail(value); }
-            }
+            SectionTitle { text: qsTr("Look") }
+
             Flow {
                 Layout.fillWidth: true
                 spacing: 4
@@ -526,6 +435,13 @@ Window {
                 visible: quickWindow.effectivePreset === quickWindow.customLook
                 Layout.fillWidth: true
                 spacing: 0
+                SliderRow {
+                    text: qsTr("Shadow detail")
+                    from: 0.0; to: 2.0; stepSize: 0.05
+                    value: prefs.customShadows
+                    valueText: Math.round(value * 100)
+                    onMoved: { prefs.customShadows = value; quickWindow.applyColor(); }
+                }
                 SliderRow {
                     text: qsTr("Brightness")
                     from: -0.2; to: 0.2; stepSize: 0.01
@@ -610,6 +526,121 @@ Window {
                     value: prefs.customGrain
                     valueText: Math.round(value * 100)
                     onMoved: { prefs.customGrain = value; quickWindow.applyColor(); }
+                }
+            }
+
+            // ----- Advanced (everything here is automatic by default) -----
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.topMargin: 6
+                implicitHeight: 30
+                radius: 8
+                color: advHover.containsMouse ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(1, 1, 1, 0.04)
+                Label {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: (prefs.advancedOpen ? "▾ " : "▸ ") + qsTr("Advanced")
+                          + (prefs.advancedOpen ? "" : qsTr("  ·  all automatic"))
+                    color: Qt.rgba(1, 1, 1, 0.8)
+                    font.pixelSize: 12
+                }
+                MouseArea {
+                    id: advHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: prefs.advancedOpen = !prefs.advancedOpen
+                }
+            }
+            ColumnLayout {
+                visible: prefs.advancedOpen
+                Layout.fillWidth: true
+                spacing: 6
+                // ----- Stream -----
+                SectionTitle { text: qsTr("Stream bitrate") }
+                Toggle {
+                    text: qsTr("Auto (PS5 adapts to your network)")
+                    checked: prefs.autoBitrate
+                    onToggled: { prefs.autoBitrate = checked; quickWindow.applyBitratePolicy(); }
+                }
+                SliderRow {
+                    visible: !prefs.autoBitrate
+                    text: qsTr("Manual")
+                    from: 5; to: 100; stepSize: 1
+                    value: prefs.manualBitrateMbps
+                    valueText: value + " Mbps"
+                    onMoved: { prefs.manualBitrateMbps = value; quickWindow.applyBitratePolicy(); }
+                }
+                Label {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: 11
+                    color: Qt.rgba(1, 1, 1, 0.5)
+                    text: qsTr("Bitrate is set when the stream starts; changes apply next time you connect.")
+                }
+
+                // ----- Performance -----
+                SectionTitle { text: qsTr("Performance") }
+                Toggle {
+                    text: qsTr("Auto (best quality this Mac can hold)")
+                    checked: prefs.autoPerformance
+                    onToggled: {
+                        prefs.autoPerformance = checked;
+                        if (checked)
+                            perf.start();
+                    }
+                }
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: 4
+                    Repeater {
+                        model: quickWindow.qualityNames
+                        delegate: Chip {
+                            required property int index
+                            required property string modelData
+                            text: modelData
+                            selected: quickWindow.currentLevel() === index
+                            tip: [qsTr("Lowest GPU use"), qsTr("Good quality, light"), qsTr("High quality scaling"),
+                                  qsTr("High quality + FSR sharpening for Retina"),
+                                  qsTr("High quality + neural upscaling (FSRCNNX on the GPU)")][index]
+                            onClicked: {
+                                prefs.autoPerformance = false;
+                                quickWindow.setLevel(index);
+                                Chiaki.settings.videoPreset = index;
+                            }
+                        }
+                    }
+                }
+                Label {
+                    visible: prefs.autoPerformance && perf.status !== ""
+                    text: perf.status
+                    font.pixelSize: 11
+                    color: Qt.rgba(1, 1, 1, 0.6)
+                }
+                Toggle {
+                    text: qsTr("Neural Engine upscaling (Apple ML)")
+                    enabled: Chiaki.window.neuralUpscaleAvailable()
+                    checked: Chiaki.settings.neuralUpscale && enabled
+                    onToggled: Chiaki.settings.neuralUpscale = checked
+                }
+                Label {
+                    id: neuralStatus
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: 11
+                    color: Qt.rgba(1, 1, 1, 0.55)
+                    text: Chiaki.window.neuralUpscaleStatus()
+                    Timer {
+                        interval: 1000; repeat: true
+                        running: quickWindow.expanded && quickWindow.visible
+                        onTriggered: neuralStatus.text = Chiaki.window.neuralUpscaleStatus()
+                    }
+                }
+                Toggle {
+                    text: qsTr("V-Sync (no tearing, slightly more latency)")
+                    checked: Chiaki.settings.vSyncEnabled
+                    onToggled: Chiaki.settings.vSyncEnabled = checked
                 }
             }
         }
