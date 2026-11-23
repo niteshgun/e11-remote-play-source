@@ -20,6 +20,10 @@
 
 struct AVFrame;
 
+// e11: frames shown since the last call (for the FPS readout)
+int e11TakeFrameCount();
+void e11CountFrame();
+
 class AIPlayRecorder
 {
 	public:

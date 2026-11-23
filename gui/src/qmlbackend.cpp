@@ -1156,6 +1156,7 @@ void QmlBackend::createSession(const StreamSessionConnectInfo &connect_info)
             av_frame_free(&frame.frame);
             return;
         }
+        e11CountFrame();
         AIPlayRecorder::Instance().SubmitFrame(frame.frame); // e11 AI Play (no-op unless recording)
         const qint64 prepare_end_us = static_cast<qint64>(chiaki_time_now_monotonic_us());
         if (prepare_end_us >= prepare_begin_us && prepare_end_us - prepare_begin_us >= 5000) {

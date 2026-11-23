@@ -15,6 +15,10 @@ extern "C" {
 #include <libavutil/pixfmt.h>
 }
 
+static std::atomic<int> g_e11_frames{0};
+void e11CountFrame() { g_e11_frames.fetch_add(1, std::memory_order_relaxed); }
+int e11TakeFrameCount() { return g_e11_frames.exchange(0); }
+
 AIPlayRecorder &AIPlayRecorder::Instance()
 {
 	static AIPlayRecorder instance;

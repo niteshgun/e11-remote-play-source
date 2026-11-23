@@ -1,5 +1,6 @@
 #pragma once
 
+#include "aiplayrecorder.h"
 #include "streamsession.h"
 #include "settings.h"
 
@@ -153,6 +154,7 @@ public:
     Q_INVOKABLE void setPhotoEffects(float sharpen, float clarity, float vibrance, float split, float vignette, float grain);
     Q_INVOKABLE QString chipName() const;
     // e11 AI Play
+    Q_INVOKABLE int takeFrameCount() const { return e11TakeFrameCount(); }
     Q_INVOKABLE bool aiPlaySetRecording(bool on);
     Q_INVOKABLE bool aiPlayRecording() const;
     Q_INVOKABLE int aiPlayFramesRecorded() const;
