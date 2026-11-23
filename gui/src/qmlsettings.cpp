@@ -809,6 +809,17 @@ void QmlSettings::setMouseTouchEnabled(bool enabled)
     emit mouseTouchEnabledChanged();
 }
 
+bool QmlSettings::retinaVivid() const
+{
+    return settings->GetRetinaVivid();
+}
+
+void QmlSettings::setRetinaVivid(bool enabled)
+{
+    settings->SetRetinaVivid(enabled);
+    emit retinaVividChanged();
+}
+
 bool QmlSettings::mouseAimEnabled() const
 {
     return settings->GetMouseAimEnabled();
@@ -1980,6 +1991,7 @@ void QmlSettings::refreshAllKeys()
     emit psnAuthTokenExpiryChanged();
     emit psnAccountIdChanged();
     emit mouseTouchEnabledChanged();
+    emit retinaVividChanged();
     emit mouseAimEnabledChanged();
     emit mouseAimSensitivityChanged();
     emit mouseAimInvertYChanged();

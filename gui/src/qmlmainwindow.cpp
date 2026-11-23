@@ -5205,6 +5205,7 @@ renderer_backend_ready:
             setCursor(Qt::ArrowCursor);
         }
         session = s;
+        retina_vivid_enabled.storeRelaxed(this->settings && this->settings->GetRetinaVivid() ? 1 : 0);
         stream_session_active.storeRelease(s ? 1 : 0);
         startup_video_visible_generation.fetchAndAddRelaxed(1);
         grab_input = 0;
@@ -6777,6 +6778,17 @@ void QmlMainWindow::render()
 
     struct pl_render_params params = *render_params;
     params.frame_mixer = effectiveFrameMixerConfig(&params);
+    // e11 Retina Vivid: PS5 games are graded for standard (Rec.709) TVs. The Mac's P3 panel can
+    // show richer colour, so give a gentle saturation/contrast lift like a TV's "vivid" mode.
+    // macOS still colour-manages the output, so skin tones stay natural at these values.
+    static const struct pl_color_adjustment e11_retina_vivid = []() {
+        struct pl_color_adjustment adj = pl_color_adjustment_neutral;
+        adj.contrast = 1.05f;
+        adj.saturation = 1.15f;
+        return adj;
+    }();
+    if (settings && stream_session_active.loadAcquire() != 0 && retina_vivid_enabled.loadRelaxed())
+        params.color_adjustment = &e11_retina_vivid;
     const bool content_timed = params.frame_mixer == nullptr;
     const bool mixer_active = params.frame_mixer != nullptr;
     const bool has_settings = settings != nullptr;

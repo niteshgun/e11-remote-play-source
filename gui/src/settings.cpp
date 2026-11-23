@@ -566,7 +566,10 @@ unsigned int Settings::GetBitrateRemotePS4() const
 
 unsigned int Settings::GetBitrateLocalPS5() const
 {
-	return settings.value("settings/bitrate_local_ps5", 0).toUInt();
+	// e11: start at a high ceiling on the home network (40 Mbps). The PS5 adapts its encoder
+	// down automatically from the packet-loss reports we send every 200 ms, so this gives the
+	// best picture the connection can carry instead of the old 15 Mbps cap.
+	return settings.value("settings/bitrate_local_ps5", 40000).toUInt();
 }
 
 unsigned int Settings::GetBitrateRemotePS5() const
@@ -687,7 +690,8 @@ static const QMap<PlaceboPreset, QString> placebo_preset_values = {
 	{ PlaceboPreset::Custom, "custom" }
 };
 
-static const PlaceboPreset placebo_preset_default = PlaceboPreset::HighQuality;
+// e11: FSR spatial upscaling sharpens the 1080p stream up to the Retina panel
+static const PlaceboPreset placebo_preset_default = PlaceboPreset::HighQualitySpatial;
 
 PlaceboPreset Settings::GetPlaceboPreset() const
 {
@@ -764,8 +768,9 @@ static const QMap<WindowType, QString> window_type_values = {
 
 WindowType Settings::GetWindowType() const
 {
-	auto v = settings.value("settings/window_type", window_type_values[WindowType::Fullscreen]).toString();
-	return window_type_values.key(v, WindowType::Fullscreen);
+	// e11: Zoom fills the 16:10 Mac screen with the 16:9 picture (no black bars, no stretching)
+	auto v = settings.value("settings/window_type", window_type_values[WindowType::Zoom]).toString();
+	return window_type_values.key(v, WindowType::Zoom);
 }
 
 void Settings::SetWindowType(WindowType type)
@@ -995,6 +1000,15 @@ bool Settings::GetMouseTouchEnabled() const
 void Settings::SetMouseTouchEnabled(bool enabled)
 {
 	settings.setValue("settings/mouse_touch_enabled", enabled);
+}
+
+bool Settings::GetRetinaVivid() const
+{
+	return settings.value("settings/retina_vivid", true).toBool();
+}
+void Settings::SetRetinaVivid(bool enabled)
+{
+	settings.setValue("settings/retina_vivid", enabled);
 }
 
 bool Settings::GetMouseAimEnabled() const

@@ -948,7 +948,23 @@ DialogView {
 
                     Label {
                         Layout.alignment: Qt.AlignRight
-                        text: qsTr("(High Quality)")
+                        text: qsTr("(High Quality + Spatial Upscaling)")
+                    }
+
+                    Label {
+                        Layout.alignment: Qt.AlignRight
+                        text: qsTr("Retina Vivid Colors:")
+                    }
+
+                    C.CheckBox {
+                        text: qsTr("Richer colour for the Mac's P3 display")
+                        checked: Chiaki.settings.retinaVivid
+                        onToggled: Chiaki.settings.retinaVivid = checked
+                    }
+
+                    Label {
+                        Layout.alignment: Qt.AlignRight
+                        text: qsTr("(On)")
                     }
 
                     Label {

@@ -443,6 +443,9 @@ class Settings : public QObject
 		bool GetMouseTouchEnabled() const;
 		void SetMouseTouchEnabled(bool enabled);
 
+		bool GetRetinaVivid() const;
+		void SetRetinaVivid(bool enabled);
+
 		bool GetMouseAimEnabled() const;
 		void SetMouseAimEnabled(bool enabled);
 		int GetMouseAimSensitivity() const;

@@ -268,6 +268,7 @@ private:
     void captureMouseAim();
     void releaseMouseAim();
     bool mouse_aim_captured = false;
+    QAtomicInteger<int> retina_vivid_enabled = 1;
     QPointF mouse_aim_center;
     bool event(QEvent *event) override;
     QObject *focusObject() const override;

@@ -81,6 +81,7 @@ class QmlSettings : public QObject
     Q_PROPERTY(QString psnAuthTokenExpiry READ psnAuthTokenExpiry WRITE setPsnAuthTokenExpiry NOTIFY psnAuthTokenExpiryChanged)
     Q_PROPERTY(QString psnAccountId READ psnAccountId WRITE setPsnAccountId NOTIFY psnAccountIdChanged)
     Q_PROPERTY(bool mouseTouchEnabled READ mouseTouchEnabled WRITE setMouseTouchEnabled NOTIFY mouseTouchEnabledChanged)
+    Q_PROPERTY(bool retinaVivid READ retinaVivid WRITE setRetinaVivid NOTIFY retinaVividChanged)
     Q_PROPERTY(bool mouseAimEnabled READ mouseAimEnabled WRITE setMouseAimEnabled NOTIFY mouseAimEnabledChanged)
     Q_PROPERTY(int mouseAimSensitivity READ mouseAimSensitivity WRITE setMouseAimSensitivity NOTIFY mouseAimSensitivityChanged)
     Q_PROPERTY(bool mouseAimInvertY READ mouseAimInvertY WRITE setMouseAimInvertY NOTIFY mouseAimInvertYChanged)
@@ -550,6 +551,8 @@ public:
     bool mouseTouchEnabled() const;
     void setMouseTouchEnabled(bool enabled);
 
+    bool retinaVivid() const;
+    void setRetinaVivid(bool enabled);
     bool mouseAimEnabled() const;
     void setMouseAimEnabled(bool enabled);
     int mouseAimSensitivity() const;
@@ -691,6 +694,7 @@ signals:
     void psnAuthTokenExpiryChanged();
     void psnAccountIdChanged();
     void mouseTouchEnabledChanged();
+    void retinaVividChanged();
     void mouseAimEnabledChanged();
     void mouseAimSensitivityChanged();
     void mouseAimInvertYChanged();
