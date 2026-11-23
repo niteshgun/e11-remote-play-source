@@ -51,8 +51,9 @@ Window {
     onCollapsedChanged: aspectPrefs.collapsed = collapsed
 
     function setMode(mode) {
-        if (mode === ChiakiWindow.VideoMode.Zoom)
-            Chiaki.window.ZoomFactor = -1; // auto: fill the screen, keep the shape
+        // Stretch should cover the whole screen, title-bar area included
+        if (mode === ChiakiWindow.VideoMode.Stretch)
+            Chiaki.window.fullscreenTime();
         Chiaki.window.videoMode = mode;
     }
 
@@ -110,8 +111,7 @@ Window {
             Repeater {
                 model: aspectWindow.collapsed ? [] : [
                     { label: qsTr("Fit"),     tip: qsTr("Original 16:9 shape, bars if the screen is taller"), mode: ChiakiWindow.VideoMode.Normal },
-                    { label: qsTr("Fill"),    tip: qsTr("Fill the screen, keep the shape (crops edges)"),     mode: ChiakiWindow.VideoMode.Zoom },
-                    { label: qsTr("Stretch"), tip: qsTr("Fill the screen by stretching the picture"),          mode: ChiakiWindow.VideoMode.Stretch }
+                    { label: qsTr("Stretch"), tip: qsTr("Go full screen and stretch the picture to fill it"),          mode: ChiakiWindow.VideoMode.Stretch }
                 ]
                 delegate: Rectangle {
                     required property var modelData

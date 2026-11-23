@@ -135,8 +135,8 @@ public:
     bool isWindowAdjustable() const { return is_window_adjustable; }
     void setWindowAdjustable(bool adjustable) { is_window_adjustable = adjustable; }
 
-    void fullscreenTime();
-    void normalTime();
+    Q_INVOKABLE void fullscreenTime();
+    Q_INVOKABLE void normalTime();
 
     bool isStreamWindowAdjustable() { return is_stream_window_adjustable; }
     void setStreamWindowAdjustable(bool adjustable) { is_stream_window_adjustable = adjustable; }
