@@ -809,6 +809,17 @@ void QmlSettings::setMouseTouchEnabled(bool enabled)
     emit mouseTouchEnabledChanged();
 }
 
+bool QmlSettings::showAspectControl() const
+{
+    return settings->GetShowAspectControl();
+}
+
+void QmlSettings::setShowAspectControl(bool show)
+{
+    settings->SetShowAspectControl(show);
+    emit showAspectControlChanged();
+}
+
 bool QmlSettings::retinaVivid() const
 {
     return settings->GetRetinaVivid();
@@ -817,6 +828,7 @@ bool QmlSettings::retinaVivid() const
 void QmlSettings::setRetinaVivid(bool enabled)
 {
     settings->SetRetinaVivid(enabled);
+    emit showAspectControlChanged();
     emit retinaVividChanged();
 }
 

@@ -953,6 +953,22 @@ DialogView {
 
                     Label {
                         Layout.alignment: Qt.AlignRight
+                        text: qsTr("Aspect Ratio Panel:")
+                    }
+
+                    C.CheckBox {
+                        text: qsTr("Show floating Fit / Fill / Stretch panel while streaming")
+                        checked: Chiaki.settings.showAspectControl
+                        onToggled: Chiaki.settings.showAspectControl = checked
+                    }
+
+                    Label {
+                        Layout.alignment: Qt.AlignRight
+                        text: qsTr("(On)")
+                    }
+
+                    Label {
+                        Layout.alignment: Qt.AlignRight
                         text: qsTr("Retina Vivid Colors:")
                     }
 

@@ -443,6 +443,9 @@ class Settings : public QObject
 		bool GetMouseTouchEnabled() const;
 		void SetMouseTouchEnabled(bool enabled);
 
+		bool GetShowAspectControl() const;
+		void SetShowAspectControl(bool show);
+
 		bool GetRetinaVivid() const;
 		void SetRetinaVivid(bool enabled);
 

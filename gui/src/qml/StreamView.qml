@@ -882,6 +882,15 @@ Item {
         }
     }
 
+    AspectControlWindow {
+        id: aspectControlWindow
+        transientParent: view.hostWindow
+        hostWindow: view.hostWindow
+        shown: !!Chiaki.session && !view.sessionLoading && !view.sessionError
+               && !(menuController.open || menuController.closing)
+               && Chiaki.settings.showAspectControl
+    }
+
     StreamMenuWindow {
         id: separateMenuWindow
         transientParent: view.hostWindow

@@ -1000,6 +1000,15 @@ void Settings::SetMouseTouchEnabled(bool enabled)
 	settings.setValue("settings/mouse_touch_enabled", enabled);
 }
 
+bool Settings::GetShowAspectControl() const
+{
+	return settings.value("settings/show_aspect_control", true).toBool();
+}
+void Settings::SetShowAspectControl(bool show)
+{
+	settings.setValue("settings/show_aspect_control", show);
+}
+
 bool Settings::GetRetinaVivid() const
 {
 	return settings.value("settings/retina_vivid", true).toBool();
