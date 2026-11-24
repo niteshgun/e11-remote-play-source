@@ -220,24 +220,11 @@ jobs:
           cp build\gui\e11remoteplay.exe $D
           cp build\third-party\cpp-steam-tools\cpp-steam-tools.dll $D
           cp scripts\qtwebengine_import.qml gui\src\qml\
-          cp "${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\bin\libcrypto-*-x64.dll" $D
-          cp "${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\bin\libssl-*-x64.dll" $D
-          cp "${{ github.workspace }}\${{ env.dep_folder }}\bin\SDL2.dll" $D
-          cp "${{ github.workspace }}\${{ env.dep_folder }}\bin\SDL3.dll" $D
-          cp "${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\bin\hidapi.dll" $D
-          cp "${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\bin\fftw3.dll" $D
-          cp "${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\bin\opus.dll" $D
-          cp "${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\bin\libspeexdsp.dll" $D
-          cp "${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\bin\lcms2.dll" $D
-          cp "${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\bin\miniupnpc.dll" $D
-          cp "${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\bin\json-c.dll" $D
-          cp "${{ github.workspace }}\${{ env.dep_folder }}\bin\swresample-*.dll" $D
-          cp "${{ github.workspace }}\${{ env.dep_folder }}\bin\avcodec-*.dll" $D
-          cp "${{ github.workspace }}\${{ env.dep_folder }}\bin\avutil-*.dll" $D
-          cp "${{ github.workspace }}\${{ env.dep_folder }}\bin\avformat-*.dll" $D
-          cp "${{ github.workspace }}\${{ env.dep_folder }}\bin\libplacebo-*.dll" $D
-          cp "${{ github.workspace }}\${{ env.dep_folder }}\bin\shaderc_shared.dll" $D
-          cp "${{ github.workspace }}\${{ env.dep_folder }}\bin\spirv-cross-c-shared.dll" $D
+          # Copy every runtime DLL from vcpkg and deps instead of a fixed list: the DLL set
+          # changes between vcpkg versions (hidapi.dll no longer exists in 2026.10.16).
+          Get-ChildItem "${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\bin\*.dll" | Copy-Item -Destination $D -Force
+          Get-ChildItem "${{ github.workspace }}\${{ env.dep_folder }}\bin\*.dll" | Copy-Item -Destination $D -Force
+          Get-ChildItem $D -Filter *.dll | Select-Object -ExpandProperty Name
           windeployqt.exe --no-translations --qmldir=gui\src\qml --release "$D\e11remoteplay.exe"
 
       - name: Package e11 Remote Play
