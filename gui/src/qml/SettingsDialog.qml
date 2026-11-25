@@ -718,7 +718,7 @@ DialogView {
 
                             Label {
                                 Layout.alignment: Qt.AlignRight
-                                text: qsTr("(L1+R1+L3+R3)")
+                                text: qsTr("(default: Create + Options)")
                             }
                         }
                     }

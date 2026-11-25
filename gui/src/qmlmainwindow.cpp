@@ -5275,6 +5275,9 @@ void QmlMainWindow::init(Settings *settings, bool exit_app_on_stream_exit)
 {
     connect(&E11Screenshot::Instance(), &E11Screenshot::saved, this, &QmlMainWindow::screenshotSaved);
     connect(&E11Screenshot::Instance(), &E11Screenshot::failed, this, &QmlMainWindow::screenshotFailed);
+#ifdef Q_OS_MACOS
+    MacControllerSwitch::KeepButtonsForApp();
+#endif
     bypass_frame_queue = settings->GetDirectFrameMapping();
     render_backend = settings->GetRenderBackend();
     setSurfaceType(render_backend == RenderBackend::Vulkan ? QWindow::VulkanSurface : QWindow::OpenGLSurface);

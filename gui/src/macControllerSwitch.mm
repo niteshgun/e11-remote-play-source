@@ -4,6 +4,7 @@
 
 #import <AppKit/AppKit.h>
 #import <IOBluetooth/IOBluetooth.h>
+#import <GameController/GameController.h>
 
 static bool LooksLikeController(IOBluetoothDevice *d)
 {
@@ -90,4 +91,28 @@ void MacControllerSwitch::OpenBluetoothSettings()
 	NSURL *url = [NSURL URLWithString:@"x-apple.systempreferences:com.apple.Bluetooth"];
 	if (![[NSWorkspace sharedWorkspace] openURL:url])
 		[[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:@"x-apple.systempreferences:com.apple.preferences.Bluetooth"]];
+}
+
+static void E11KeepButtons(GCController *c)
+{
+	if (!c)
+		return;
+	if (@available(macOS 11.0, *)) {
+		for (GCControllerElement *el in c.physicalInputProfile.allElements)
+			el.preferredSystemGestureState = GCSystemGestureStateDisabled;
+	}
+}
+
+void MacControllerSwitch::KeepButtonsForApp()
+{
+	dispatch_async(dispatch_get_main_queue(), ^{
+		for (GCController *c in [GCController controllers])
+			E11KeepButtons(c);
+		[[NSNotificationCenter defaultCenter] addObserverForName:GCControllerDidConnectNotification
+		                                                  object:nil
+		                                                   queue:[NSOperationQueue mainQueue]
+		                                              usingBlock:^(NSNotification *note) {
+			E11KeepButtons((GCController *)note.object);
+		}];
+	});
 }

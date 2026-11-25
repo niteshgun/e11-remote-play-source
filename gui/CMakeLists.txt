@@ -155,7 +155,7 @@ if(NOT CHIAKI_ENABLE_FFMPEG_DECODER)
 	message(FATAL_ERROR "Chiaki GUI requires CHIAKI_ENABLE_FFMPEG_DECODER=ON")
 endif()
 if(APPLE)
-	target_link_libraries(chiaki "-framework AVFoundation" "-framework IOKit" "-framework AppKit" "-framework ApplicationServices" "-framework VideoToolbox" "-framework CoreVideo" "-framework CoreMedia" "-framework IOBluetooth" "-framework Metal" "-framework MetalFX")
+	target_link_libraries(chiaki "-framework AVFoundation" "-framework IOKit" "-framework AppKit" "-framework ApplicationServices" "-framework VideoToolbox" "-framework CoreVideo" "-framework CoreMedia" "-framework IOBluetooth" "-framework GameController" "-framework Metal" "-framework MetalFX")
 endif()
 
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fanalyzer")

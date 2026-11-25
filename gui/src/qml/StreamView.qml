@@ -173,22 +173,16 @@ Item {
                     horizontalCenter: spinner.horizontalCenter
                     topMargin: 30
                 }
-                text: {
-                    if(Chiaki.settings.dpadTouchEnabled)
-                    {
-                        if(Chiaki.settings.audioVideoDisabled == 0x01)
-                            qsTr("Audio Disabled in settings\n") + qsTr("Press %1 to open stream menu").arg(Chiaki.controllers.length ? Chiaki.settings.stringForStreamMenuShortcut() : "Ctrl+O") + "\n" + qsTr("Press %1 to toggle between regular dpad and dpad touch").arg(Chiaki.settings.stringForDpadShortcut())
-                        else
-                            qsTr("Press %1 to open stream menu").arg(Chiaki.controllers.length ? Chiaki.settings.stringForStreamMenuShortcut() : "Ctrl+O") + "\n" + qsTr("Press %1 to toggle between regular dpad and dpad touch").arg(Chiaki.settings.stringForDpadShortcut())
-                    }
-                    else
-                    {
-                        if(Chiaki.settings.audioVideoDisabled == 0x01)
-                            qsTr("Audio Disabled in settings\n") + qsTr("Press %1 to open stream menu").arg(Chiaki.controllers.length ? Chiaki.settings.stringForStreamMenuShortcut() : "Ctrl+O")
-                        else
-                            qsTr("Press %1 to open stream menu").arg(Chiaki.controllers.length ? Chiaki.settings.stringForStreamMenuShortcut() : "Ctrl+O")
-                    }
-                }
+                // e11: one simple line instead of button-combo instructions
+                text: (Chiaki.settings.audioVideoDisabled == 0x01 ? qsTr("Sound is turned off in Settings") + "\n" : "")
+                      + qsTr("Starting your game…") + "\n"
+                      + qsTr("Menu any time: %1 on the controller, or %2")
+                        .arg(Chiaki.settings.stringForStreamMenuShortcut().replace(/\+/g, " + "))
+                        .arg(Qt.platform.os === "osx" ? "⌘O" : "Ctrl+O")
+                horizontalAlignment: Text.AlignHCenter
+                color: "#b3bdc9"
+                font.pixelSize: 15
+                lineHeight: 1.3
                 visible: sessionLoading
             }
 

@@ -1162,31 +1162,31 @@ void Settings::SetStreamMenuEnabled(bool enabled)
 }
 
 uint Settings::GetStreamMenuShortcut1() const {
-	return settings.value("settings/stream_menu_shortcut1", 9).toUInt();
+	return settings.value("settings/e11_stream_menu_shortcut1", 14).toUInt();
 }
 void Settings::SetStreamMenuShortcut1(uint button) {
-	settings.setValue("settings/stream_menu_shortcut1", button);
+	settings.setValue("settings/e11_stream_menu_shortcut1", button);
 }
 
 uint Settings::GetStreamMenuShortcut2() const {
-	return settings.value("settings/stream_menu_shortcut2", 10).toUInt();
+	return settings.value("settings/e11_stream_menu_shortcut2", 13).toUInt();
 }
 void Settings::SetStreamMenuShortcut2(uint button) {
-	settings.setValue("settings/stream_menu_shortcut2", button);
+	settings.setValue("settings/e11_stream_menu_shortcut2", button);
 }
 
 uint Settings::GetStreamMenuShortcut3() const {
-	return settings.value("settings/stream_menu_shortcut3", 11).toUInt();
+	return settings.value("settings/e11_stream_menu_shortcut3", 0).toUInt();
 }
 void Settings::SetStreamMenuShortcut3(uint button) {
-	settings.setValue("settings/stream_menu_shortcut3", button);
+	settings.setValue("settings/e11_stream_menu_shortcut3", button);
 }
 
 uint Settings::GetStreamMenuShortcut4() const {
-	return settings.value("settings/stream_menu_shortcut4", 12).toUInt();
+	return settings.value("settings/e11_stream_menu_shortcut4", 0).toUInt();
 }
 void Settings::SetStreamMenuShortcut4(uint button) {
-	settings.setValue("settings/stream_menu_shortcut4", button);
+	settings.setValue("settings/e11_stream_menu_shortcut4", button);
 }
 
 QString Settings::GetPsnAccountId() const
@@ -2481,7 +2481,7 @@ QString Settings::GetChiakiControllerButtonName(int button)
 		case CHIAKI_CONTROLLER_BUTTON_L3         : return tr("L3");
 		case CHIAKI_CONTROLLER_BUTTON_R3         : return tr("R3");
 		case CHIAKI_CONTROLLER_BUTTON_OPTIONS    : return tr("Options");
-		case CHIAKI_CONTROLLER_BUTTON_SHARE      : return tr("Share");
+		case CHIAKI_CONTROLLER_BUTTON_SHARE      : return tr("Create");
 		case CHIAKI_CONTROLLER_BUTTON_TOUCHPAD   : return tr("Touchpad");
 		case CHIAKI_CONTROLLER_BUTTON_PS         : return tr("PS");
 		case CHIAKI_CONTROLLER_ANALOG_BUTTON_L2  : return tr("L2");

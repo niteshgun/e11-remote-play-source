@@ -16,6 +16,10 @@ namespace MacControllerSwitch {
 	int AirDropOn();
 	int HandoffOn();
 	void OpenAirDropHandoffSettings();
+
+	// Keep the PS button (and Create/Options) for e11 and the PS5: stop macOS Game Mode
+	// from using it to open its Game Overlay. Applies to controllers now and later.
+	void KeepButtonsForApp();
 }
 
 #endif
