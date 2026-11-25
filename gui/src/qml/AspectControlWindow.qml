@@ -273,7 +273,7 @@ Window {
             cleanStreak = 0;
             if (prefs.autoPerformance2) {
                 Chiaki.settings.vSyncEnabled = true;
-                if (Chiaki.window.neuralUpscaleAvailable())
+                if (Chiaki.window.neuralUpscaleAvailable() && !Chiaki.settings.metalFXUpscale)
                     Chiaki.settings.neuralUpscale = true;
                 quickWindow.setLevel(quickWindow.chipMaxLevel());
                 status = qsTr("Auto: tuning for this Mac…");
@@ -310,7 +310,7 @@ Window {
             // Neural Engine experiment: if it's still dropping without it, it wasn't the cause
             if (perf.neuralOffTest > 0) {
                 perf.neuralOffTest--;
-                if (dropped >= 3 && Chiaki.window.neuralUpscaleAvailable()) {
+                if (dropped >= 3 && Chiaki.window.neuralUpscaleAvailable() && !Chiaki.settings.metalFXUpscale) {
                     Chiaki.settings.neuralUpscale = true;
                     perf.neuralOffTest = 0;
                 } else if (perf.neuralOffTest === 0 && perf.goodSeconds > 0) {
@@ -949,6 +949,27 @@ Window {
                                 interval: 1000; repeat: true
                                 running: quickWindow.expanded && quickWindow.visible
                                 onTriggered: neuralStatus.text = Chiaki.window.neuralUpscaleStatus()
+                            }
+                        }
+                        // e11 MetalFX upscaling (GPU spatial scaler); either this or the Neural Engine
+                        Toggle {
+                            text: qsTr("MetalFX upscaling (GPU, lighter than Neural Engine)")
+                            enabled: Chiaki.window.metalFXAvailable()
+                            checked: Chiaki.settings.metalFXUpscale && enabled
+                            onToggled: Chiaki.settings.metalFXUpscale = checked
+                        }
+                        Label {
+                            id: metalFXStatus
+                            visible: Chiaki.settings.metalFXUpscale
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            font.pixelSize: 11
+                            color: Qt.rgba(1, 1, 1, 0.55)
+                            text: Chiaki.window.metalFXStatus()
+                            Timer {
+                                interval: 1000; repeat: true
+                                running: quickWindow.expanded && quickWindow.visible && Chiaki.settings.metalFXUpscale
+                                onTriggered: metalFXStatus.text = Chiaki.window.metalFXStatus()
                             }
                         }
                         // e11 Pro Motion: 60 -> 120 fps frame generation (Apple ML, macOS 26+)

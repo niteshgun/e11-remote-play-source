@@ -171,6 +171,8 @@ public:
     Q_INVOKABLE QString neuralUpscaleStatus() const;
     Q_INVOKABLE bool cleanPictureAvailable() const;
     Q_INVOKABLE bool proMotionAvailable() const;
+    Q_INVOKABLE bool metalFXAvailable() const;
+    Q_INVOKABLE QString metalFXStatus() const;
     Q_INVOKABLE QString proMotionStatus() const;
     Q_INVOKABLE bool proMotionActive() const;
     Q_INVOKABLE int proMotionSurplus() const;

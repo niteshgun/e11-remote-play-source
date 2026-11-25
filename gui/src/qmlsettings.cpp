@@ -3,6 +3,7 @@
 #include "macNeuralUpscale.h"
 #include "macNoiseFilter.h"
 #include "macFrameInterp.h"
+#include "macMetalFXUpscale.h"
 #endif
 #include "sessionlog.h"
 
@@ -826,6 +827,35 @@ void QmlSettings::setNeuralUpscale(bool enabled)
     MacNeuralUpscale::SetEnabled(enabled);
 #endif
     emit neuralUpscaleChanged();
+    // one upscaler at a time
+    if (enabled && settings->GetMetalFXUpscale()) {
+        settings->SetMetalFXUpscale(false);
+#ifdef Q_OS_MACOS
+        MacMetalFXUpscale::SetEnabled(false);
+#endif
+        emit metalFXUpscaleChanged();
+    }
+}
+
+bool QmlSettings::metalFXUpscale() const
+{
+    return settings->GetMetalFXUpscale();
+}
+
+void QmlSettings::setMetalFXUpscale(bool enabled)
+{
+    settings->SetMetalFXUpscale(enabled);
+#ifdef Q_OS_MACOS
+    MacMetalFXUpscale::SetEnabled(enabled);
+#endif
+    emit metalFXUpscaleChanged();
+    if (enabled && settings->GetNeuralUpscale()) {
+        settings->SetNeuralUpscale(false);
+#ifdef Q_OS_MACOS
+        MacNeuralUpscale::SetEnabled(false);
+#endif
+        emit neuralUpscaleChanged();
+    }
 }
 
 bool QmlSettings::proMotion() const

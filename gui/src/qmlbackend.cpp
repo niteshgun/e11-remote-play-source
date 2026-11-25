@@ -5,6 +5,7 @@
 #include "macNeuralUpscale.h"
 #include "macNoiseFilter.h"
 #include "macFrameInterp.h"
+#include "macMetalFXUpscale.h"
 #endif
 #include "qmlsettings.h"
 #include "qmlmainwindow.h"
@@ -457,6 +458,21 @@ QmlBackend::QmlBackend(Settings *settings, QmlMainWindow *window)
     refreshPsnToken();
 }
 
+#ifdef Q_OS_MACOS
+// e11: the user's upscaler for a VideoToolbox frame - Neural Engine (Apple ML) or MetalFX (GPU).
+// Neural Engine falls back to MetalFX if that is on too. nullptr = no upscaling for this frame.
+static AVFrame *e11UpscaleGpuFrame(const AVFrame *f)
+{
+    if (MacNeuralUpscale::Enabled()) {
+        if (AVFrame *u = MacNeuralUpscale::Process(f))
+            return u;
+    }
+    if (MacMetalFXUpscale::Enabled())
+        return MacMetalFXUpscale::Process(f);
+    return nullptr;
+}
+#endif
+
 bool QmlBackend::prepareFrameForPresentation(ChiakiFfmpegFrame &frame, bool use_opengl_renderer)
 {
     if (!frame.frame)
@@ -477,11 +493,11 @@ bool QmlBackend::prepareFrameForPresentation(ChiakiFfmpegFrame &frame, bool use_
     // e11: "Clean picture" (Apple temporal noise filter) then Neural Engine super resolution
     // (VideoToolbox low-latency scaler), both macOS 26+. Each falls back to the normal copy
     // below if unavailable, disabled, too slow or on error.
-    if (format == AV_PIX_FMT_VIDEOTOOLBOX && (MacNoiseFilter::Enabled() || MacNeuralUpscale::Enabled())) {
-        const bool upscale = MacNeuralUpscale::Enabled();
+    if (format == AV_PIX_FMT_VIDEOTOOLBOX && (MacNoiseFilter::Enabled() || MacNeuralUpscale::Enabled() || MacMetalFXUpscale::Enabled())) {
+        const bool upscale = MacNeuralUpscale::Enabled() || MacMetalFXUpscale::Enabled();
         AVFrame *clean = MacNoiseFilter::Enabled() ? MacNoiseFilter::Process(frame.frame, upscale) : nullptr;
         if (upscale) {
-            if (AVFrame *upscaled = MacNeuralUpscale::Process(clean ? clean : frame.frame)) {
+            if (AVFrame *upscaled = e11UpscaleGpuFrame(clean ? clean : frame.frame)) {
                 av_frame_free(&clean);
                 av_frame_free(&frame.frame);
                 frame.frame = upscaled;
@@ -1206,8 +1222,8 @@ void QmlBackend::createSession(const StreamSessionConnectInfo &connect_info)
         QmlMainWindow *target_window = window;
 #ifdef Q_OS_MACOS
         if (between) {
-            // Same look as the real frames: Neural Engine upscale when it is on, else a plain copy.
-            AVFrame *shown = MacNeuralUpscale::Enabled() ? MacNeuralUpscale::Process(between) : nullptr;
+            // Same look as the real frames: the same upscaler when one is on, else a plain copy.
+            AVFrame *shown = e11UpscaleGpuFrame(between);
             if (!shown)
                 shown = MacNoiseFilter::Download(between);
             av_frame_free(&between);

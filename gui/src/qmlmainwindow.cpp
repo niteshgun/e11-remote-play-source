@@ -9,6 +9,7 @@
 #include "macNeuralUpscale.h"
 #include "macNoiseFilter.h"
 #include "macFrameInterp.h"
+#include "macMetalFXUpscale.h"
 #include "macControllerSwitch.h"
 #endif
 #include <QCursor>
@@ -2847,6 +2848,33 @@ bool QmlMainWindow::setLookLut(const QString &source_in)
     return true;
 }
 
+bool QmlMainWindow::metalFXAvailable() const
+{
+#ifdef Q_OS_MACOS
+    return MacMetalFXUpscale::Available();
+#else
+    return false;
+#endif
+}
+
+QString QmlMainWindow::metalFXStatus() const
+{
+#ifdef Q_OS_MACOS
+    if (!MacMetalFXUpscale::Available())
+        return tr("Not supported on this Mac");
+    if (!MacMetalFXUpscale::Enabled())
+        return tr("Off");
+    if (MacMetalFXUpscale::Active())
+        return tr("On: %1×%2, %3 ms/frame (GPU)").arg(MacMetalFXUpscale::OutputWidth()).arg(MacMetalFXUpscale::OutputHeight())
+            .arg(MacMetalFXUpscale::LastProcessMs(), 0, 'f', 1);
+    if (session)
+        return tr("On (waiting for frames, or switched itself off because it was too slow)");
+    return tr("On: starts with the stream");
+#else
+    return tr("Mac only");
+#endif
+}
+
 bool QmlMainWindow::proMotionAvailable() const
 {
 #ifdef Q_OS_MACOS
@@ -5528,6 +5556,8 @@ renderer_backend_ready:
         MacNoiseFilter::Reset();
         MacFrameInterp::SetEnabled(this->settings && this->settings->GetProMotion());
         MacFrameInterp::Reset();
+        MacMetalFXUpscale::SetEnabled(this->settings && this->settings->GetMetalFXUpscale());
+        MacMetalFXUpscale::Reset();
 #endif
         if (this->settings && this->settings->GetRetinaVivid())
             setColorAdjust(0.0f, 1.05f, 1.15f, 0.0f);

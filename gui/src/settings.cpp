@@ -1020,6 +1020,16 @@ void Settings::SetLookLut(const QString &source)
 	settings.setValue("settings/look_lut", source);
 }
 
+bool Settings::GetMetalFXUpscale() const
+{
+	// e11 MetalFX spatial upscaling (GPU). Off by default; either this or the Neural Engine.
+	return settings.value("settings/metalfx_upscale", false).toBool();
+}
+void Settings::SetMetalFXUpscale(bool enabled)
+{
+	settings.setValue("settings/metalfx_upscale", enabled);
+}
+
 bool Settings::GetProMotion() const
 {
 	// e11 Pro Motion (60 -> 120 fps frame generation). Off by default: adds ~8 ms and GPU work.
