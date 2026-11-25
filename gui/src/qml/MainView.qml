@@ -811,7 +811,7 @@ Pane {
                             }
                             Item { Layout.fillWidth: true }
                             LinkText {
-                                text: (controllerCard.smoothOk ? qsTr("Tips") : qsTr("Fix it for me"))
+                                text: (controllerCard.smoothOk ? qsTr("Tips") : qsTr("How to fix"))
                                 tint: consolePane.cLilac
                                 font.pixelSize: 13
                                 onActivated: smoothPopup.open()
@@ -848,16 +848,27 @@ Pane {
         Timer { id: psToastTimer; interval: 3500; onTriggered: psToast.opacity = 0 }
     }
 
-    Popup {
+    // Smooth play guide: a plain overlay on this screen (dims the page, card in the middle)
+    Rectangle {
         id: smoothPopup
-        parent: Overlay.overlay
-        anchors.centerIn: parent
-        width: Math.min(parent ? parent.width - 80 : 640, 640)
-        modal: true
-        focus: true
-        padding: 24
-        background: Rectangle { radius: 18; color: consolePane.cPanel; border.color: consolePane.cLine }
-        contentItem: ColumnLayout {
+        function open() { visible = true; }
+        function close() { visible = false; }
+        visible: false
+        anchors.fill: parent
+        z: 100
+        color: "#b307090c"
+        MouseArea { anchors.fill: parent; onClicked: smoothPopup.close() }
+        Rectangle {
+            anchors.centerIn: parent
+            width: Math.min(parent.width - 80, 640)
+            height: smoothCard.implicitHeight + 48
+            radius: 18
+            color: consolePane.cPanel
+            border.color: consolePane.cLine
+            MouseArea { anchors.fill: parent }
+        ColumnLayout {
+            id: smoothCard
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 24 }
             spacing: 14
             Label { text: qsTr("Smooth play on Mac"); color: consolePane.cInk; font.pixelSize: 22; font.weight: Font.Black }
             Label {
@@ -904,5 +915,6 @@ Pane {
             }
             PillButton { text: qsTr("Got it"); filled: true; tint: consolePane.cSky; Layout.alignment: Qt.AlignRight; onClicked: smoothPopup.close() }
         }
+    }
     }
 }
