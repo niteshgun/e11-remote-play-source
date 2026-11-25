@@ -657,7 +657,7 @@ Window {
             }
             Chip {
                 visible: !quickWindow.collapsed && Chiaki.controllers.length > 0
-                text: "🎮 " + (Chiaki.controllers.length ? quickWindow.controllerLine(Chiaki.controllers[0]) : "")
+                text: (Chiaki.controllers.length ? quickWindow.controllerLine(Chiaki.controllers[0]) : "")
                 tip: Chiaki.controllers.length > 1 ? qsTr("%1 controllers connected").arg(Chiaki.controllers.length)
                                                    : qsTr("Controller connected")
                 onClicked: quickWindow.expanded = true
@@ -665,7 +665,8 @@ Window {
             Chip {
                 // e11 Enhance: click to cycle Off -> Auto -> Max
                 visible: !quickWindow.collapsed && Qt.platform.os === "osx"
-                text: "✨ " + enh.modeNames[prefs.enhanceMode]
+                text: qsTr("Enhance: %1").arg(enh.modeNames[prefs.enhanceMode])
+                tip: qsTr("Sharper picture with MetalFX. Click to switch Off / Auto / Max")
                 selected: prefs.enhanceMode !== 0
                 onClicked: enh.setMode((prefs.enhanceMode + 1) % 3)
             }
@@ -675,7 +676,7 @@ Window {
                 property string flash: ""
                 property string message: ""
                 visible: !quickWindow.collapsed
-                text: flash !== "" ? flash : "📷"
+                text: flash === "✓" ? qsTr("Saved") : flash === "⚠" ? qsTr("Failed") : qsTr("Screenshot")
                 tip: message !== "" ? message : qsTr("Screenshot (⌘P). Saved to Pictures › e11 Screenshots")
                 onClicked: {
                     if (flash === "✓")
@@ -704,13 +705,13 @@ Window {
             }
             Chip {
                 visible: !quickWindow.collapsed
-                text: "⚙"
+                text: qsTr("Settings")
                 tip: qsTr("Quick menu: bitrate, performance, colour")
                 selected: quickWindow.expanded
                 onClicked: quickWindow.expanded = !quickWindow.expanded
             }
             Chip {
-                text: quickWindow.collapsed ? "⤢" : "–"
+                text: quickWindow.collapsed ? qsTr("Show") : qsTr("Hide")
                 tip: quickWindow.collapsed ? qsTr("Show") : qsTr("Shrink")
                 onClicked: quickWindow.collapsed = !quickWindow.collapsed
             }
@@ -946,7 +947,7 @@ Window {
                         model: Chiaki.controllers
                         delegate: Label {
                             required property var modelData
-                            text: "🎮  " + quickWindow.controllerLine(modelData) + qsTr("  ·  connected")
+                            text: quickWindow.controllerLine(modelData) + qsTr("  ·  connected")
                             font.pixelSize: 13
                             color: "white"
                         }
@@ -1094,7 +1095,7 @@ Window {
                                 ? qsTr("Switch speakers or AirPods any time from the sound menu in the menu bar.")
                                 : qsTr("A chosen speaker is used from the next time you connect.")
                         }
-                        SectionTitle { text: qsTr("✨ Enhance (sharper, cleaner picture)"); visible: Qt.platform.os === "osx" }
+                        SectionTitle { text: qsTr("Enhance (sharper, cleaner picture)"); visible: Qt.platform.os === "osx" }
                         Flow {
                             visible: Qt.platform.os === "osx"
                             Layout.fillWidth: true
