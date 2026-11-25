@@ -168,6 +168,8 @@ public:
     Q_INVOKABLE void openScreenshotFolder() const;
     Q_INVOKABLE bool neuralUpscaleAvailable() const;
     Q_INVOKABLE QString neuralUpscaleStatus() const;
+    Q_INVOKABLE bool cleanPictureAvailable() const;
+    Q_INVOKABLE QString cleanPictureStatus() const;
     Q_INVOKABLE void grabInput();
     Q_INVOKABLE void releaseInput();
     Q_INVOKABLE void requestOverlayUpdate();

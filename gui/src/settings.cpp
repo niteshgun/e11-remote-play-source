@@ -1010,6 +1010,25 @@ void Settings::SetNeuralUpscale(bool enabled)
 	settings.setValue("settings/neural_upscale_v2", enabled);
 }
 
+bool Settings::GetCleanPicture() const
+{
+	// e11 "Clean picture" (Apple temporal noise filter). Off by default: opt-in, costs GPU time.
+	return settings.value("settings/clean_picture", false).toBool();
+}
+void Settings::SetCleanPicture(bool enabled)
+{
+	settings.setValue("settings/clean_picture", enabled);
+}
+
+float Settings::GetCleanPictureStrength() const
+{
+	return std::clamp(settings.value("settings/clean_picture_strength", 0.5f).toFloat(), 0.0f, 1.0f);
+}
+void Settings::SetCleanPictureStrength(float strength)
+{
+	settings.setValue("settings/clean_picture_strength", std::clamp(strength, 0.0f, 1.0f));
+}
+
 bool Settings::GetShowAspectControl() const
 {
 	return settings.value("settings/show_aspect_control", true).toBool();

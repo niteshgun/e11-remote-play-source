@@ -82,6 +82,8 @@ class QmlSettings : public QObject
     Q_PROPERTY(QString psnAccountId READ psnAccountId WRITE setPsnAccountId NOTIFY psnAccountIdChanged)
     Q_PROPERTY(bool mouseTouchEnabled READ mouseTouchEnabled WRITE setMouseTouchEnabled NOTIFY mouseTouchEnabledChanged)
     Q_PROPERTY(bool neuralUpscale READ neuralUpscale WRITE setNeuralUpscale NOTIFY neuralUpscaleChanged)
+    Q_PROPERTY(bool cleanPicture READ cleanPicture WRITE setCleanPicture NOTIFY cleanPictureChanged)
+    Q_PROPERTY(float cleanPictureStrength READ cleanPictureStrength WRITE setCleanPictureStrength NOTIFY cleanPictureStrengthChanged)
     Q_PROPERTY(bool showAspectControl READ showAspectControl WRITE setShowAspectControl NOTIFY showAspectControlChanged)
     Q_PROPERTY(bool retinaVivid READ retinaVivid WRITE setRetinaVivid NOTIFY retinaVividChanged)
     Q_PROPERTY(bool mouseAimEnabled READ mouseAimEnabled WRITE setMouseAimEnabled NOTIFY mouseAimEnabledChanged)
@@ -555,6 +557,10 @@ public:
 
     bool neuralUpscale() const;
     void setNeuralUpscale(bool enabled);
+    bool cleanPicture() const;
+    void setCleanPicture(bool enabled);
+    float cleanPictureStrength() const;
+    void setCleanPictureStrength(float strength);
     bool showAspectControl() const;
     void setShowAspectControl(bool show);
     bool retinaVivid() const;
@@ -701,6 +707,8 @@ signals:
     void psnAccountIdChanged();
     void mouseTouchEnabledChanged();
     void neuralUpscaleChanged();
+    void cleanPictureChanged();
+    void cleanPictureStrengthChanged();
     void showAspectControlChanged();
     void retinaVividChanged();
     void mouseAimEnabledChanged();

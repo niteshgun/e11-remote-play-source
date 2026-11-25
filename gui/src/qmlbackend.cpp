@@ -3,6 +3,7 @@
 #include "e11screenshot.h"
 #ifdef Q_OS_MACOS
 #include "macNeuralUpscale.h"
+#include "macNoiseFilter.h"
 #endif
 #include "qmlsettings.h"
 #include "qmlmainwindow.h"
@@ -472,12 +473,29 @@ bool QmlBackend::prepareFrameForPresentation(ChiakiFfmpegFrame &frame, bool use_
 
     const int format = frame.frame->format;
 #ifdef Q_OS_MACOS
-    // e11: Neural Engine super resolution (VideoToolbox low-latency scaler, macOS 26+).
-    // Falls back to the normal copy below if unavailable, disabled, too slow or on error.
-    if (format == AV_PIX_FMT_VIDEOTOOLBOX && MacNeuralUpscale::Enabled()) {
-        if (AVFrame *upscaled = MacNeuralUpscale::Process(frame.frame)) {
+    // e11: "Clean picture" (Apple temporal noise filter) then Neural Engine super resolution
+    // (VideoToolbox low-latency scaler), both macOS 26+. Each falls back to the normal copy
+    // below if unavailable, disabled, too slow or on error.
+    if (format == AV_PIX_FMT_VIDEOTOOLBOX && (MacNoiseFilter::Enabled() || MacNeuralUpscale::Enabled())) {
+        const bool upscale = MacNeuralUpscale::Enabled();
+        AVFrame *clean = MacNoiseFilter::Enabled() ? MacNoiseFilter::Process(frame.frame, upscale) : nullptr;
+        if (upscale) {
+            if (AVFrame *upscaled = MacNeuralUpscale::Process(clean ? clean : frame.frame)) {
+                av_frame_free(&clean);
+                av_frame_free(&frame.frame);
+                frame.frame = upscaled;
+                return frame_has_planes(frame.frame);
+            }
+        }
+        if (clean && clean->format == AV_PIX_FMT_VIDEOTOOLBOX) {
+            // cleaned on the GPU for the upscaler, but the upscaler didn't take it
+            AVFrame *sw = MacNoiseFilter::Download(clean);
+            av_frame_free(&clean);
+            clean = sw;
+        }
+        if (clean) {
             av_frame_free(&frame.frame);
-            frame.frame = upscaled;
+            frame.frame = clean;
             return frame_has_planes(frame.frame);
         }
     }

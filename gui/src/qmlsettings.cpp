@@ -1,6 +1,7 @@
 #include "qmlsettings.h"
 #ifdef Q_OS_MACOS
 #include "macNeuralUpscale.h"
+#include "macNoiseFilter.h"
 #endif
 #include "sessionlog.h"
 
@@ -824,6 +825,34 @@ void QmlSettings::setNeuralUpscale(bool enabled)
     MacNeuralUpscale::SetEnabled(enabled);
 #endif
     emit neuralUpscaleChanged();
+}
+
+bool QmlSettings::cleanPicture() const
+{
+    return settings->GetCleanPicture();
+}
+
+void QmlSettings::setCleanPicture(bool enabled)
+{
+    settings->SetCleanPicture(enabled);
+#ifdef Q_OS_MACOS
+    MacNoiseFilter::SetEnabled(enabled);
+#endif
+    emit cleanPictureChanged();
+}
+
+float QmlSettings::cleanPictureStrength() const
+{
+    return settings->GetCleanPictureStrength();
+}
+
+void QmlSettings::setCleanPictureStrength(float strength)
+{
+    settings->SetCleanPictureStrength(strength);
+#ifdef Q_OS_MACOS
+    MacNoiseFilter::SetStrength(settings->GetCleanPictureStrength());
+#endif
+    emit cleanPictureStrengthChanged();
 }
 
 bool QmlSettings::showAspectControl() const

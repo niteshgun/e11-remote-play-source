@@ -890,6 +890,45 @@ Window {
                                 onTriggered: neuralStatus.text = Chiaki.window.neuralUpscaleStatus()
                             }
                         }
+                        // e11: Clean picture (Apple ML temporal noise filter, macOS 26+)
+                        Toggle {
+                            text: qsTr("Clean picture (removes blockiness and noise)")
+                            enabled: Chiaki.window.cleanPictureAvailable()
+                            checked: Chiaki.settings.cleanPicture && enabled
+                            onToggled: Chiaki.settings.cleanPicture = checked
+                        }
+                        Flow {
+                            visible: Chiaki.settings.cleanPicture && Chiaki.window.cleanPictureAvailable()
+                            Layout.fillWidth: true
+                            spacing: 4
+                            Repeater {
+                                model: [
+                                    { name: qsTr("Light"), value: 0.25 },
+                                    { name: qsTr("Medium"), value: 0.5 },
+                                    { name: qsTr("Strong"), value: 0.85 }
+                                ]
+                                delegate: Chip {
+                                    required property var modelData
+                                    text: modelData.name
+                                    selected: Math.abs(Chiaki.settings.cleanPictureStrength - modelData.value) < 0.05
+                                    onClicked: Chiaki.settings.cleanPictureStrength = modelData.value
+                                }
+                            }
+                        }
+                        Label {
+                            id: cleanStatus
+                            visible: Chiaki.settings.cleanPicture
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            font.pixelSize: 11
+                            color: Qt.rgba(1, 1, 1, 0.55)
+                            text: Chiaki.window.cleanPictureStatus()
+                            Timer {
+                                interval: 1000; repeat: true
+                                running: quickWindow.expanded && quickWindow.visible && Chiaki.settings.cleanPicture
+                                onTriggered: cleanStatus.text = Chiaki.window.cleanPictureStatus()
+                            }
+                        }
                         Toggle {
                             text: qsTr("V-Sync (no tearing, slightly more latency)")
                             checked: Chiaki.settings.vSyncEnabled

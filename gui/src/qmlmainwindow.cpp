@@ -7,6 +7,7 @@
 #ifdef Q_OS_MACOS
 #include "macMouseAim.h"
 #include "macNeuralUpscale.h"
+#include "macNoiseFilter.h"
 #include "macControllerSwitch.h"
 #endif
 #include <QCursor>
@@ -2780,6 +2781,32 @@ void QmlMainWindow::setColorAdjust(float brightness, float contrast, float satur
     requestOverlayUpdate();
 }
 
+bool QmlMainWindow::cleanPictureAvailable() const
+{
+#ifdef Q_OS_MACOS
+    return MacNoiseFilter::Available();
+#else
+    return false;
+#endif
+}
+
+QString QmlMainWindow::cleanPictureStatus() const
+{
+#ifdef Q_OS_MACOS
+    if (!MacNoiseFilter::Available())
+        return tr("Needs macOS 26 or later on Apple silicon");
+    if (!MacNoiseFilter::Enabled())
+        return tr("Off");
+    if (MacNoiseFilter::Active())
+        return tr("On: %1 ms/frame").arg(MacNoiseFilter::LastProcessMs(), 0, 'f', 1);
+    if (session)
+        return tr("On (waiting for frames, or switched itself off because it was too slow)");
+    return tr("On: starts with the stream");
+#else
+    return tr("Mac only");
+#endif
+}
+
 bool QmlMainWindow::neuralUpscaleAvailable() const
 {
 #ifdef Q_OS_MACOS
@@ -5376,6 +5403,10 @@ renderer_backend_ready:
 #ifdef Q_OS_MACOS
         MacNeuralUpscale::SetEnabled(this->settings && this->settings->GetNeuralUpscale());
         MacNeuralUpscale::Reset();
+        MacNoiseFilter::SetEnabled(this->settings && this->settings->GetCleanPicture());
+        if (this->settings)
+            MacNoiseFilter::SetStrength(this->settings->GetCleanPictureStrength());
+        MacNoiseFilter::Reset();
 #endif
         if (this->settings && this->settings->GetRetinaVivid())
             setColorAdjust(0.0f, 1.05f, 1.15f, 0.0f);

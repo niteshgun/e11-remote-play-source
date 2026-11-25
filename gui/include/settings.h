@@ -445,6 +445,10 @@ class Settings : public QObject
 
 		bool GetNeuralUpscale() const;
 		void SetNeuralUpscale(bool enabled);
+		bool GetCleanPicture() const;
+		void SetCleanPicture(bool enabled);
+		float GetCleanPictureStrength() const;
+		void SetCleanPictureStrength(float strength);
 
 		bool GetShowAspectControl() const;
 		void SetShowAspectControl(bool show);

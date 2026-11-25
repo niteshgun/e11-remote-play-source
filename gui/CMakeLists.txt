@@ -86,6 +86,8 @@ if(APPLE)
 		src/macMouseAim.mm
 		include/macNeuralUpscale.h
 		src/macNeuralUpscale.mm
+		include/macNoiseFilter.h
+		src/macNoiseFilter.mm
 		include/macControllerSwitch.h
 		src/macControllerSwitch.mm
 		include/macWakeSleep.h
