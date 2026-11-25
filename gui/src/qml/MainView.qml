@@ -42,7 +42,7 @@ Pane {
         if(!Chiaki.autoConnect && !root.initialAsk && !Chiaki.window.directStream)
         {
             root.initialAsk = true;
-            if(Chiaki.settings.addSteamShortcutAsk && (typeof Chiaki.createSteamShortcut === "function"))
+            if(Chiaki.settings.addSteamShortcutAsk && (typeof Chiaki.createSteamShortcut === "function") && Qt.platform.os !== "osx")
                 root.showRemindDialog(qsTr("Official Steam artwork + controller layout"), qsTr("Would you like to either create a new non-Steam game for e11 Remote Play\nor update an existing non-Steam game with the official artwork and controller layout?") + "\n\n" + qsTr("(Note: If you select no now and want to do this later, click the button or press R3 from the main menu.)"), false, () => root.showSteamShortcutDialog(true));
             else if(Chiaki.settings.remotePlayAsk)
             {
@@ -87,7 +87,7 @@ Pane {
             event.accepted = true;
             break;
         case Qt.Key_F1:
-            if (typeof Chiaki.createSteamShortcut === "function") root.showSteamShortcutDialog(false);
+            if (typeof Chiaki.createSteamShortcut === "function" && Qt.platform.os !== "osx") root.showSteamShortcutDialog(false);
             event.accepted = true;
             break;
         case Qt.Key_F2:
@@ -356,7 +356,7 @@ Pane {
                 NavItem { text: qsTr("Smooth play"); tint: consolePane.cLemon; onClicked: smoothPopup.open() }
                 NavItem {
                     text: qsTr("Steam shortcut"); tint: consolePane.cSky
-                    visible: typeof Chiaki.createSteamShortcut === "function"
+                    visible: typeof Chiaki.createSteamShortcut === "function" && Qt.platform.os !== "osx"
                     onClicked: root.showSteamShortcutDialog(false)
                 }
 

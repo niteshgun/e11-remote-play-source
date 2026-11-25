@@ -56,7 +56,12 @@ Item {
             left: parent.left
             right: parent.right
         }
-        height: 80
+        height: 64
+        // e11: dark header in the app's colours (no tinted toolbar)
+        background: Rectangle {
+            color: "#0b0e13"
+            Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: "#1e2530" }
+        }
 
         RowLayout {
             anchors {
@@ -66,10 +71,11 @@ Item {
             }
 
             Button {
-                Layout.fillHeight: true
-                Layout.preferredWidth: 100
+                Layout.alignment: Qt.AlignVCenter
                 flat: true
-                text: "❮"
+                text: qsTr("‹  Back")
+                font.pixelSize: 15
+                Material.foreground: "#b3bdc9"
                 focusPolicy: Qt.NoFocus
                 Material.roundedScale: Material.SmallScale
                 onClicked: {
@@ -80,18 +86,30 @@ Item {
 
             Item { Layout.fillWidth: true }
 
-            Button {
+            AbstractButton {
                 id: okButton
-                Layout.fillHeight: true
-                flat: true
-                padding: 30
-                font.pixelSize: 25
+                Layout.alignment: Qt.AlignVCenter
+                implicitHeight: 40
+                implicitWidth: okLabel.implicitWidth + 36
                 focusPolicy: Qt.NoFocus
-                Material.roundedScale: Material.SmallScale
+                hoverEnabled: true
+                opacity: enabled ? 1 : 0.4
                 onClicked: dialog.accepted()
-                icon.source: "qrc:/icons/options.svg";
-                icon.width: 50
-                icon.height: 50
+                background: Rectangle {
+                    radius: 12
+                    color: okButton.hovered ? "#1a5aa9ff" : "transparent"
+                    border.width: 1.5
+                    border.color: "#5aa9ff"
+                }
+                contentItem: Label {
+                    id: okLabel
+                    text: okButton.text
+                    color: "#5aa9ff"
+                    font.pixelSize: 15
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
             }
         }
 
@@ -100,8 +118,9 @@ Item {
             anchors.centerIn: parent
             horizontalAlignment: Qt.AlignHCenter
             verticalAlignment: Qt.AlignVCenter
-            font.bold: true
-            font.pixelSize: 26
+            font.weight: Font.Black
+            font.pixelSize: 20
+            color: "#eef2f7"
         }
 
         Label {

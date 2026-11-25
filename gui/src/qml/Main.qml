@@ -14,6 +14,8 @@ Item {
     Material.theme: Material.Dark
     Material.accent: "#5aa9ff"
     Material.background: "#07090c"
+    Material.primary: "#0b0e13"
+    Material.foreground: "#eef2f7"
 
     function controllerButton(name) {
         let type = "deck";
