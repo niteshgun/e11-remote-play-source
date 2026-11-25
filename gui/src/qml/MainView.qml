@@ -145,7 +145,9 @@ Pane {
         hoverEnabled: true
         background: Rectangle {
             radius: 10
-            color: nav.active ? Qt.alpha(consolePane.cSky, 0.12) : (nav.hovered ? Qt.alpha("#ffffff", 0.04) : "transparent")
+            color: nav.hovered && !nav.active ? Qt.alpha("#ffffff", 0.04) : "transparent"
+            border.width: 1.5
+            border.color: nav.active ? nav.tint : "transparent"
         }
         contentItem: RowLayout {
             spacing: 12
@@ -180,9 +182,9 @@ Pane {
         implicitWidth: chipLabel.implicitWidth + 26
         background: Rectangle {
             radius: height / 2
-            color: chip.on ? chip.tint : (chip.hovered ? Qt.alpha("#ffffff", 0.05) : "transparent")
-            border.width: chip.on ? 0 : 1
-            border.color: consolePane.cLine
+            color: chip.hovered && !chip.on ? Qt.alpha("#ffffff", 0.05) : "transparent"
+            border.width: 1.5
+            border.color: chip.on ? chip.tint : consolePane.cLine
         }
         contentItem: Label {
             id: chipLabel
@@ -191,7 +193,7 @@ Pane {
             verticalAlignment: Text.AlignVCenter
             font.pixelSize: 12
             font.weight: chip.on ? Font.Bold : Font.Normal
-            color: chip.on ? chip.onInk : consolePane.cDim
+            color: chip.on ? chip.tint : consolePane.cDim
         }
     }
 
