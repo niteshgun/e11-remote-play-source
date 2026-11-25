@@ -28,6 +28,8 @@ set(SOURCE_FILES
 	src/streamsession.cpp
 	include/aiplayrecorder.h
 	src/aiplayrecorder.cpp
+	include/e11screenshot.h
+	src/e11screenshot.cpp
 	include/sessionlog.h
 	src/sessionlog.cpp
 	include/settings.h

@@ -475,6 +475,39 @@ Window {
                 onClicked: quickWindow.expanded = true
             }
             Chip {
+                id: shotChip
+                // e11: screenshot. ✓ = saved (click again to open the folder), ⚠ = failed.
+                property string flash: ""
+                property string message: ""
+                visible: !quickWindow.collapsed
+                text: flash !== "" ? flash : "📷"
+                tip: message !== "" ? message : qsTr("Screenshot (⌘P). Saved to Pictures › e11 Screenshots")
+                onClicked: {
+                    if (flash === "✓")
+                        Chiaki.window.openScreenshotFolder()
+                    else
+                        Chiaki.window.takeScreenshot()
+                }
+                Timer {
+                    id: shotFlashTimer
+                    interval: 3000
+                    onTriggered: { shotChip.flash = ""; shotChip.message = "" }
+                }
+                Connections {
+                    target: Chiaki.window
+                    function onScreenshotSaved(path) {
+                        shotChip.flash = "✓"
+                        shotChip.message = qsTr("Saved: %1").arg(path)
+                        shotFlashTimer.restart()
+                    }
+                    function onScreenshotFailed(reason) {
+                        shotChip.flash = "⚠"
+                        shotChip.message = reason
+                        shotFlashTimer.restart()
+                    }
+                }
+            }
+            Chip {
                 visible: !quickWindow.collapsed
                 text: "⚙"
                 tip: qsTr("Quick menu: bitrate, performance, colour")

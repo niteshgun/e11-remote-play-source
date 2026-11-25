@@ -164,6 +164,8 @@ public:
     Q_INVOKABLE int aiPlayFramesRecorded() const;
     Q_INVOKABLE double aiPlayTotalMinutes() const;
     Q_INVOKABLE void aiPlayOpenFolder() const;
+    Q_INVOKABLE void takeScreenshot();
+    Q_INVOKABLE void openScreenshotFolder() const;
     Q_INVOKABLE bool neuralUpscaleAvailable() const;
     Q_INVOKABLE QString neuralUpscaleStatus() const;
     Q_INVOKABLE void grabInput();
@@ -197,6 +199,8 @@ signals:
     void zoomFactorChanged();
     void videoPresetChanged();
     void menuRequested();
+    void screenshotSaved(const QString &path);
+    void screenshotFailed(const QString &reason);
     void directStreamChanged();
     void queueDepthAverageChanged();
     void pendingFrameAgeChanged();

@@ -14,6 +14,7 @@
 #include <QDir>
 #include <QUrl>
 #include "aiplayrecorder.h"
+#include "e11screenshot.h"
 #include <QSysInfo>
 #include <algorithm>
 #ifdef Q_OS_MACOS
@@ -2851,6 +2852,21 @@ double QmlMainWindow::aiPlayTotalMinutes() const
     return AIPlayRecorder::Instance().TotalMinutesOnDisk();
 }
 
+void QmlMainWindow::takeScreenshot()
+{
+    if (!session || !has_video) {
+        emit screenshotFailed(tr("Start a stream first"));
+        return;
+    }
+    E11Screenshot::Instance().Request();
+}
+
+void QmlMainWindow::openScreenshotFolder() const
+{
+    QDir().mkpath(E11Screenshot::Folder());
+    QDesktopServices::openUrl(QUrl::fromLocalFile(E11Screenshot::Folder()));
+}
+
 void QmlMainWindow::aiPlayOpenFolder() const
 {
     QDir().mkpath(AIPlayRecorder::Instance().RootFolder());
@@ -5018,6 +5034,8 @@ void QmlMainWindow::doneOpenGLContextCurrent()
 
 void QmlMainWindow::init(Settings *settings, bool exit_app_on_stream_exit)
 {
+    connect(&E11Screenshot::Instance(), &E11Screenshot::saved, this, &QmlMainWindow::screenshotSaved);
+    connect(&E11Screenshot::Instance(), &E11Screenshot::failed, this, &QmlMainWindow::screenshotFailed);
     bypass_frame_queue = settings->GetDirectFrameMapping();
     render_backend = settings->GetRenderBackend();
     setSurfaceType(render_backend == RenderBackend::Vulkan ? QWindow::VulkanSurface : QWindow::OpenGLSurface);
@@ -7899,6 +7917,9 @@ bool QmlMainWindow::handleShortcut(QKeyEvent *event)
             else
                 normalTime();
             return true;
+        case Qt::Key_F12:
+            takeScreenshot();
+            return true;
         default:
             break;
         }
@@ -7922,6 +7943,9 @@ bool QmlMainWindow::handleShortcut(QKeyEvent *event)
         return true;
     case Qt::Key_O:
         emit menuRequested();
+        return true;
+    case Qt::Key_P:
+        takeScreenshot();
         return true;
     case Qt::Key_Q:
 #ifndef Q_OS_MACOS

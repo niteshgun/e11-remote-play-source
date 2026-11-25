@@ -1,5 +1,6 @@
 #include "qmlbackend.h"
 #include "aiplayrecorder.h"
+#include "e11screenshot.h"
 #ifdef Q_OS_MACOS
 #include "macNeuralUpscale.h"
 #endif
@@ -1158,6 +1159,7 @@ void QmlBackend::createSession(const StreamSessionConnectInfo &connect_info)
         }
         e11CountFrame();
         AIPlayRecorder::Instance().SubmitFrame(frame.frame); // e11 AI Play (no-op unless recording)
+        E11Screenshot::Instance().Offer(frame.frame); // e11 screenshot (no-op unless requested)
         const qint64 prepare_end_us = static_cast<qint64>(chiaki_time_now_monotonic_us());
         if (prepare_end_us >= prepare_begin_us && prepare_end_us - prepare_begin_us >= 5000) {
             CHIAKI_NOISY_DEBUG().nospace()
