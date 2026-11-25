@@ -74,6 +74,8 @@ Window {
         if (streaming) {
             applyColor();
             Chiaki.window.setComputerSoundMuted(!prefs.soundOnComputer);
+            if (Chiaki.window.aiPlayRecording())
+                Chiaki.window.aiPlaySetRecording(false);
             enh.start();
             perf.start();
         }
@@ -102,6 +104,8 @@ Window {
         if (streaming) {
             applyColor();
             Chiaki.window.setComputerSoundMuted(!prefs.soundOnComputer);
+            if (Chiaki.window.aiPlayRecording())
+                Chiaki.window.aiPlaySetRecording(false);
             enh.start();
             perf.start();
         } else {
@@ -985,48 +989,7 @@ Window {
                         onToggled: Chiaki.settings.showStreamStats = checked
                     }
 
-                    // ----- AI Play -----
-                    SectionTitle { text: qsTr("AI Play") }
-                    Toggle {
-                        id: recToggle
-                        text: Chiaki.window.aiPlayRecording() ? qsTr("● Recording your gameplay") : qsTr("Record my gameplay for AI Play")
-                        checked: Chiaki.window.aiPlayRecording()
-                        onToggled: {
-                            Chiaki.window.aiPlaySetRecording(checked);
-                            aiStatus.refresh();
-                            text = Chiaki.window.aiPlayRecording() ? qsTr("● Recording your gameplay") : qsTr("Record my gameplay for AI Play");
-                        }
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Label {
-                            id: aiStatus
-                            Layout.fillWidth: true
-                            wrapMode: Text.WordWrap
-                            font.pixelSize: 11
-                            color: Qt.rgba(1, 1, 1, 0.6)
-                            function fmt(sec) { return Math.floor(sec / 60) + ":" + ("0" + Math.floor(sec % 60)).slice(-2); }
-                            function refresh() {
-                                const total = Chiaki.window.aiPlayTotalMinutes();
-                                if (Chiaki.window.aiPlayRecording())
-                                    text = qsTr("This session %1 · %2 min recorded in total").arg(fmt(Chiaki.window.aiPlayFramesRecorded() / 15)).arg(total.toFixed(0));
-                                else
-                                    text = total > 0 ? qsTr("%1 min recorded. Play more of one activity (like driving) for better AI.").arg(total.toFixed(0))
-                                                     : qsTr("Play normally while recording; the AI learns from you. Story mode only.");
-                            }
-                            Component.onCompleted: refresh()
-                            Timer {
-                                interval: 1000; repeat: true
-                                running: quickWindow.expanded && quickWindow.visible
-                                onTriggered: aiStatus.refresh()
-                            }
-                        }
-                        Chip {
-                            text: qsTr("Folder")
-                            tip: qsTr("Open your recordings")
-                            onClicked: Chiaki.window.aiPlayOpenFolder()
-                        }
-                    }
+                    // AI Play recording UI removed for launch (C++ recorder kept, always off).
 
                     // ----- Advanced (everything here is automatic by default) -----
                     Rectangle {
