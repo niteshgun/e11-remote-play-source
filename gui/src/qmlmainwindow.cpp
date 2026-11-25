@@ -26,6 +26,7 @@
 
 #define PL_LIBAV_IMPLEMENTATION 0
 #include <libplacebo/utils/libav.h>
+#include <libplacebo/shaders/lut.h>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -2779,6 +2780,69 @@ void QmlMainWindow::setColorAdjust(float brightness, float contrast, float satur
     color_saturation.store(std::clamp(saturation, 0.0f, 2.0f), std::memory_order_relaxed);
     color_temperature.store(std::clamp(temperature, -0.5f, 0.5f), std::memory_order_relaxed);
     requestOverlayUpdate();
+}
+
+static const struct { const char *id; const char *name; } e11_builtin_luts[] = {
+    {"cinematic", QT_TRANSLATE_NOOP("QmlMainWindow", "Cinematic")},
+    {"warm_film", QT_TRANSLATE_NOOP("QmlMainWindow", "Warm film")},
+    {"cool_night", QT_TRANSLATE_NOOP("QmlMainWindow", "Cool night")},
+    {"vivid_pop", QT_TRANSLATE_NOOP("QmlMainWindow", "Vivid pop")},
+    {"vice_sunset", QT_TRANSLATE_NOOP("QmlMainWindow", "Vice sunset")},
+    {"noir", QT_TRANSLATE_NOOP("QmlMainWindow", "Noir")},
+};
+
+QVariantList QmlMainWindow::builtinLuts() const
+{
+    QVariantList out;
+    for (const auto &l : e11_builtin_luts) {
+        QVariantMap m;
+        m["id"] = QStringLiteral("builtin:") + QString::fromLatin1(l.id);
+        m["name"] = tr(l.name);
+        out.append(m);
+    }
+    return out;
+}
+
+QString QmlMainWindow::lookLut() const
+{
+    QMutexLocker locker(&look_lut_mutex);
+    return look_lut_source;
+}
+
+bool QmlMainWindow::setLookLut(const QString &source_in)
+{
+    QString source = source_in;
+    if (source.startsWith(QStringLiteral("file:")))
+        source = QUrl(source).toLocalFile();
+    std::shared_ptr<struct pl_custom_lut> lut;
+    if (!source.isEmpty()) {
+        const QString path = source.startsWith(QStringLiteral("builtin:"))
+            ? QStringLiteral(":/luts/") + source.mid(8) + QStringLiteral(".cube")
+            : source;
+        QFile f(path);
+        if (!f.open(QIODevice::ReadOnly) || f.size() > 64 * 1024 * 1024) {
+            qCWarning(chiakiGui) << "Colour grade: can't read" << path;
+            return false;
+        }
+        const QByteArray data = f.readAll();
+        struct pl_custom_lut *parsed = pl_lut_parse_cube(placebo_log, data.constData(), (size_t)data.size());
+        if (!parsed) {
+            qCWarning(chiakiGui) << "Colour grade: not a valid .cube LUT:" << path;
+            return false;
+        }
+        lut = std::shared_ptr<struct pl_custom_lut>(parsed, [](struct pl_custom_lut *p) { pl_lut_free(&p); });
+        qCInfo(chiakiGui) << "Colour grade: loaded" << path << parsed->size[0] << parsed->size[1] << parsed->size[2];
+    }
+    {
+        QMutexLocker locker(&look_lut_mutex);
+        look_lut = lut;
+        look_lut_source = source;
+    }
+    if (settings)
+        settings->SetLookLut(source);
+    emit lookLutChanged();
+    requestOverlayUpdate();
+    return true;
 }
 
 bool QmlMainWindow::cleanPictureAvailable() const
@@ -5577,6 +5641,8 @@ renderer_backend_ready:
     this->renderparams_changed = true;
     this->fsr_hook = load_mpv_hook(placeboGpu(), QStringLiteral(":/shaders/FSR.glsl"));
     this->looks_hook = load_mpv_hook(placeboGpu(), QStringLiteral(":/shaders/e11_looks.glsl"));
+    if (!settings->GetLookLut().isEmpty() && !setLookLut(settings->GetLookLut()))
+        settings->SetLookLut(QString()); // file moved or broken: back to no grade
     this->fsrcnnx_hook_8 = load_mpv_hook(placeboGpu(), QStringLiteral(":/shaders/FSRCNNX_x2_8-0-4-1.glsl"));
     this->fsrcnnx_hook_16 = load_mpv_hook(placeboGpu(), QStringLiteral(":/shaders/FSRCNNX_x2_16-0-4-1.glsl"));
 
@@ -6997,6 +7063,16 @@ void QmlMainWindow::render()
             && render_color_adjust.saturation == 1.0f && render_color_adjust.temperature == 0.0f;
         if (!neutral)
             params.color_adjustment = &render_color_adjust;
+    }
+    // e11 colour grade (.cube LUT on the decoded RGB). Kept alive for this whole render call.
+    std::shared_ptr<struct pl_custom_lut> frame_lut;
+    if (stream_session_active.loadAcquire() != 0) {
+        QMutexLocker locker(&look_lut_mutex);
+        frame_lut = look_lut;
+    }
+    if (frame_lut) {
+        params.lut = frame_lut.get();
+        params.lut_type = PL_LUT_NORMALIZED;
     }
     const bool content_timed = params.frame_mixer == nullptr;
     const bool mixer_active = params.frame_mixer != nullptr;

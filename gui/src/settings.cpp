@@ -1010,6 +1010,16 @@ void Settings::SetNeuralUpscale(bool enabled)
 	settings.setValue("settings/neural_upscale_v2", enabled);
 }
 
+QString Settings::GetLookLut() const
+{
+	// e11 colour grade: "" (none), "builtin:<id>" or a path to a .cube file
+	return settings.value("settings/look_lut", QString()).toString();
+}
+void Settings::SetLookLut(const QString &source)
+{
+	settings.setValue("settings/look_lut", source);
+}
+
 bool Settings::GetCleanPicture() const
 {
 	// e11 "Clean picture" (Apple temporal noise filter). Off by default: opt-in, costs GPU time.

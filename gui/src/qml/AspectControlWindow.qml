@@ -6,6 +6,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
 import QtQuick.Controls.Material
+import QtQuick.Dialogs
 import QtQuick.Window
 
 import org.streetpea.chiaking
@@ -570,6 +571,61 @@ Window {
                         text: qsTr("Game  ✓  (tuned for Mac screens)")
                         color: "white"
                         font.pixelSize: 13
+                    }
+                    // e11 colour grade: built-in LUT looks or your own .cube file
+                    Label {
+                        text: qsTr("Colour grade")
+                        color: Qt.rgba(1, 1, 1, 0.75)
+                        font.pixelSize: 12
+                        Layout.topMargin: 2
+                    }
+                    Flow {
+                        id: lutFlow
+                        Layout.fillWidth: true
+                        spacing: 4
+                        property string current: Chiaki.window.lookLut()
+                        property string error: ""
+                        Connections {
+                            target: Chiaki.window
+                            function onLookLutChanged() { lutFlow.current = Chiaki.window.lookLut() }
+                        }
+                        Chip {
+                            text: qsTr("None")
+                            selected: lutFlow.current === ""
+                            onClicked: Chiaki.window.setLookLut("")
+                        }
+                        Repeater {
+                            model: Chiaki.window.builtinLuts()
+                            delegate: Chip {
+                                required property var modelData
+                                text: modelData.name
+                                selected: lutFlow.current === modelData.id
+                                onClicked: Chiaki.window.setLookLut(modelData.id)
+                            }
+                        }
+                        Chip {
+                            readonly property bool custom: lutFlow.current !== "" && !lutFlow.current.startsWith("builtin:")
+                            text: custom ? "🎨 " + lutFlow.current.split("/").pop() : qsTr("Import .cube…")
+                            selected: custom
+                            onClicked: lutDialog.open()
+                        }
+                    }
+                    Label {
+                        visible: lutFlow.error !== ""
+                        text: lutFlow.error
+                        color: "#ffd28a"
+                        font.pixelSize: 11
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                    }
+                    FileDialog {
+                        id: lutDialog
+                        title: qsTr("Choose a colour grade (.cube LUT)")
+                        nameFilters: [qsTr("3D LUT (*.cube)")]
+                        onAccepted: {
+                            lutFlow.error = Chiaki.window.setLookLut(selectedFile.toString())
+                                ? "" : qsTr("That file isn't a valid .cube LUT")
+                        }
                     }
                     Flow {
                         visible: false

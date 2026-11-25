@@ -31,4 +31,12 @@
     <file alias="FSRCNNX_x2_8-0-4-1.glsl">shaders/FSRCNNX_x2_8-0-4-1.glsl</file>
     <file alias="FSRCNNX_x2_16-0-4-1.glsl">shaders/FSRCNNX_x2_16-0-4-1.glsl</file>
   </qresource>
+  <qresource prefix="/luts">
+    <file alias="cinematic.cube">luts/cinematic.cube</file>
+    <file alias="warm_film.cube">luts/warm_film.cube</file>
+    <file alias="cool_night.cube">luts/cool_night.cube</file>
+    <file alias="vivid_pop.cube">luts/vivid_pop.cube</file>
+    <file alias="vice_sunset.cube">luts/vice_sunset.cube</file>
+    <file alias="noir.cube">luts/noir.cube</file>
+  </qresource>
 </RCC>

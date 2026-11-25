@@ -5,6 +5,7 @@
 #include "settings.h"
 
 #include <QMutex>
+#include <memory>
 #include <QAtomicInteger>
 #include <QWindow>
 #include <QQuickWindow>
@@ -169,6 +170,9 @@ public:
     Q_INVOKABLE bool neuralUpscaleAvailable() const;
     Q_INVOKABLE QString neuralUpscaleStatus() const;
     Q_INVOKABLE bool cleanPictureAvailable() const;
+    Q_INVOKABLE QVariantList builtinLuts() const;
+    Q_INVOKABLE QString lookLut() const;
+    Q_INVOKABLE bool setLookLut(const QString &source);
     Q_INVOKABLE QString cleanPictureStatus() const;
     Q_INVOKABLE void grabInput();
     Q_INVOKABLE void releaseInput();
@@ -202,6 +206,7 @@ signals:
     void videoPresetChanged();
     void menuRequested();
     void screenshotSaved(const QString &path);
+    void lookLutChanged();
     void screenshotFailed(const QString &reason);
     void directStreamChanged();
     void queueDepthAverageChanged();
@@ -303,6 +308,11 @@ private:
     std::atomic<float> fx_sharpen{0.0f}, fx_clarity{0.0f}, fx_vibrance{0.0f};
     std::atomic<float> fx_split{0.0f}, fx_vignette{0.0f}, fx_grain{0.0f};
     std::atomic<float> fx_bloom{0.0f}, fx_rays{0.0f}, fx_shadows{0.0f};
+    // e11 colour grade (.cube LUT). The renderer copies the shared_ptr under the mutex, so a LUT
+    // swapped from the UI stays alive until the frame that uses it is done.
+    std::shared_ptr<struct pl_custom_lut> look_lut;
+    QString look_lut_source;
+    mutable QMutex look_lut_mutex;
     QPointF mouse_aim_center;
     bool event(QEvent *event) override;
     QObject *focusObject() const override;
