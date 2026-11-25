@@ -2857,6 +2857,17 @@ bool QmlMainWindow::metalFXAvailable() const
 #endif
 }
 
+int QmlMainWindow::screenRefreshHz() const
+{
+    return screen() ? qRound(screen()->refreshRate()) : 60;
+}
+
+void QmlMainWindow::setComputerSoundMuted(bool muted)
+{
+    if (session)
+        session->SetAudioOutputMuted(muted);
+}
+
 void QmlMainWindow::updateEnhanceTarget()
 {
 #ifdef Q_OS_MACOS

@@ -28,6 +28,7 @@
 #endif
 
 #include "exception.h"
+#include <atomic>
 #include "sessionlog.h"
 #include "controllermanager.h"
 #include "settings.h"
@@ -271,6 +272,7 @@ class StreamSession : public QObject
 #endif
 
 		QString audio_out_device_name;
+		std::atomic<bool> audio_out_muted{false};
 		QString audio_in_device_name;
 		SDL_AudioDeviceID audio_out;
 		SDL_AudioDeviceID audio_in;
@@ -376,6 +378,10 @@ class StreamSession : public QObject
 		bool GetMuted()	{ return muted; }
 		void SetMuted(bool enable)	{ if (enable != muted) ToggleMute(); }
 		void SetAudioVolume(int volume) { audio_volume = volume; }
+		// e11 "TV only": silence this computer's speakers without touching the audio pipeline
+		// (frames are simply not queued, so sync is untouched and unmuting is instant).
+		void SetAudioOutputMuted(bool m) { audio_out_muted = m; }
+		bool GetAudioOutputMuted() const { return audio_out_muted; }
 		bool GetCantDisplay()	{ return cant_display; }
 		ChiakiErrorCode ConnectPsnConnection(QString duid, bool ps5);
 		void CancelPsnConnection(bool stop_thread);

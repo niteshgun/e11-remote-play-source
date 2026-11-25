@@ -2136,7 +2136,7 @@ void StreamSession::StopSdeckHaptics()
 
 void StreamSession::PushAudioFrame(int16_t *og_buf, size_t samples_count)
 {
-	if(!audio_out || !audio_volume)
+	if(!audio_out || !audio_volume || audio_out_muted)
 		return;
 
 	QByteArray buf((int)(samples_count * audio_out_sample_size), 0);

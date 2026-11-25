@@ -18,6 +18,8 @@ Window {
     property var hostWindow: null
     property bool collapsed: false
     property bool expanded: false
+    // refresh the speaker list each time the menu opens (AirPods may have just connected)
+    onExpandedChanged: if (expanded) Chiaki.settings.refreshAudioDevices()
 
     // ---------- persisted preferences ----------
     Settings {
@@ -33,6 +35,8 @@ Window {
         property bool autoPerformance2: true
         // e11 Enhance: 0 Off, 1 Auto (default), 2 Max
         property int enhanceMode: 1
+        // e11 Sound: true = this computer + TV (default), false = TV only (computer muted)
+        property bool soundOnComputer: true
         property bool showAdvancedVideo: false
         // Look: -1 = follow "Retina Vivid Colors" setting; otherwise index into lookPresets,
         // lookPresets.length = Custom
@@ -69,6 +73,7 @@ Window {
         applyBitratePolicy();
         if (streaming) {
             applyColor();
+            Chiaki.window.setComputerSoundMuted(!prefs.soundOnComputer);
             enh.start();
             perf.start();
         }
@@ -96,6 +101,7 @@ Window {
     onStreamingChanged: {
         if (streaming) {
             applyColor();
+            Chiaki.window.setComputerSoundMuted(!prefs.soundOnComputer);
             enh.start();
             perf.start();
         } else {
@@ -314,10 +320,16 @@ Window {
                 return " · " + Chiaki.window.metalFXStatus().replace(qsTr("On: "), "");
             return "";
         }
+        property int slowSeconds: 0
         function start() {
             ceiling = 3;
             cleanStreak = 0;
             sinceUp = 999;
+            slowSeconds = 0;
+            // Zero-lag rule: Pro Motion delays every real frame by half a frame and its extra
+            // frames can't be shown below 100 Hz, so it is always off on such screens.
+            if (Chiaki.settings.proMotion && Chiaki.window.screenRefreshHz() < 100)
+                Chiaki.settings.proMotion = false;
             Chiaki.window.updateEnhanceTarget();
             if (prefs.enhanceMode === 0) {
                 status = "";
@@ -373,6 +385,19 @@ Window {
                         .arg(enh.modeNames[prefs.enhanceMode]).arg(enh.names[enh.tier]);
                     return;
                 }
+            }
+            // Zero-lag budget: the upscaler may add at most ~4 ms (95th percentile)
+            if (enh.tier >= 2 && Chiaki.window.metalFXP95Ms() > 4.0) {
+                if (++enh.slowSeconds >= 3) {
+                    enh.slowSeconds = 0;
+                    enh.ceiling = Math.min(enh.ceiling, enh.tier - 1);
+                    enh.sinceUp = 999;
+                    enh.apply(enh.tier - 1);
+                    enh.status = qsTr("%1: %2 (kept lag-free)").arg(enh.modeNames[prefs.enhanceMode]).arg(enh.names[enh.tier]);
+                    return;
+                }
+            } else {
+                enh.slowSeconds = 0;
             }
             const c = enh.cap();
             if (enh.tier > c) {
@@ -1055,6 +1080,57 @@ Window {
                         }
 
                         // ----- Performance -----
+                        SectionTitle { text: qsTr("🔊 Sound") }
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 4
+                            Chip {
+                                text: Qt.platform.os === "osx" ? qsTr("Mac + TV") : qsTr("PC + TV")
+                                selected: prefs.soundOnComputer
+                                onClicked: { prefs.soundOnComputer = true; Chiaki.window.setComputerSoundMuted(false) }
+                            }
+                            Chip {
+                                text: qsTr("TV only")
+                                selected: !prefs.soundOnComputer
+                                onClicked: { prefs.soundOnComputer = false; Chiaki.window.setComputerSoundMuted(true) }
+                            }
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            font.pixelSize: 11
+                            color: Qt.rgba(1, 1, 1, 0.55)
+                            text: (Qt.platform.os === "osx"
+                                   ? qsTr("Sound only on the Mac? Mute your TV: the PS5 always sends sound to it.")
+                                   : qsTr("Sound only on the PC? Mute your TV: the PS5 always sends sound to it."))
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            visible: prefs.soundOnComputer
+                            Label {
+                                text: Qt.platform.os === "osx" ? qsTr("Mac speaker") : qsTr("Speaker")
+                                color: "white"
+                                font.pixelSize: 13
+                            }
+                            ComboBox {
+                                id: speakerBox
+                                Layout.fillWidth: true
+                                font.pixelSize: 12
+                                model: [qsTr("System default (follows the sound menu)")].concat(Chiaki.settings.availableAudioOutDevices)
+                                currentIndex: Math.max(0, model.indexOf(Chiaki.settings.audioOutDevice))
+                                onActivated: (index) => Chiaki.settings.audioOutDevice = index ? model[index] : ""
+                            }
+                        }
+                        Label {
+                            visible: prefs.soundOnComputer
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            font.pixelSize: 11
+                            color: Qt.rgba(1, 1, 1, 0.55)
+                            text: Chiaki.settings.audioOutDevice === ""
+                                ? qsTr("Switch speakers or AirPods any time from the sound menu in the menu bar.")
+                                : qsTr("A chosen speaker is used from the next time you connect.")
+                        }
                         SectionTitle { text: qsTr("✨ Enhance (sharper, cleaner picture)"); visible: Qt.platform.os === "osx" }
                         Flow {
                             visible: Qt.platform.os === "osx"

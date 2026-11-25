@@ -175,6 +175,10 @@ public:
     Q_INVOKABLE QString metalFXStatus() const;
     // e11 Enhance (Auto policy)
     Q_INVOKABLE void updateEnhanceTarget();
+    // e11 Sound: "TV only" mutes this computer's speakers for the current stream
+    Q_INVOKABLE void setComputerSoundMuted(bool muted);
+    // refresh rate of the screen e11 is on (60 on a MacBook Air, 120 on ProMotion)
+    Q_INVOKABLE int screenRefreshHz() const;
     Q_INVOKABLE bool metalFXActive() const;
     Q_INVOKABLE double metalFXP95Ms() const;
     Q_INVOKABLE bool onBatteryPower() const;
