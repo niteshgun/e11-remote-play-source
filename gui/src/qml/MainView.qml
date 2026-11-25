@@ -94,7 +94,35 @@ Pane {
             root.showManualHostDialog();
             event.accepted = true;
             break;
+        case Qt.Key_HomePage:
+            // PS button on the controller (it is paired to this Mac, so the PS5 never sees it)
+            consolePane.psButtonWake();
+            event.accepted = true;
+            break;
         }
+    }
+
+    // e11: the controller belongs to the Mac now, so its PS button can't wake the PS5 by itself.
+    // We do it for it: wake the selected (or first) console and start playing.
+    property double lastPsWake: 0
+    function psButtonWake() {
+        const now = Date.now();
+        if (now - lastPsWake < 6000 || Chiaki.session)
+            return;
+        let item = hostsView.currentItem && hostsView.currentItem.visible ? hostsView.currentItem : null;
+        if (!item) {
+            for (let i = 0; i < hostsView.count; i++) {
+                const it = hostsView.itemAtIndex(i);
+                if (it && it.visible) { item = it; break; }
+            }
+        }
+        if (!item) {
+            psToast.show(qsTr("No PS5 found yet. Turn on console search or sign in with PSN."));
+            return;
+        }
+        lastPsWake = now;
+        psToast.show(qsTr("Waking %1 and starting…").arg(item.consoleName));
+        item.psWake();
     }
 
     // ---------- small building blocks ----------
@@ -467,6 +495,15 @@ Pane {
                             root.showConsolePinDialog(index);
                         }
 
+                        readonly property string consoleName: modelData.name ? modelData.name : (modelData.ps5 ? "PS5" : "PS4")
+                        function psWake() {
+                            // Saved console that isn't visible on the network: send the wake packet first,
+                            // then connect (connecting also wakes a console in rest mode or via PSN).
+                            if (modelData.registered && !modelData.discovered && !modelData.duid)
+                                Chiaki.wakeUpHost(index);
+                            connectToHost();
+                        }
+
                         background: Rectangle {
                             radius: 18
                             border.width: 1.5
@@ -663,6 +700,14 @@ Pane {
                                     Label { Layout.fillWidth: true; elide: Text.ElideRight; color: consolePane.cInk; font.pixelSize: 13; text: controllerCard.line(modelData) }
                                 }
                             }
+                            Label {
+                                visible: Chiaki.controllers.length > 0
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                font.pixelSize: 12
+                                color: consolePane.cMint
+                                text: qsTr("Press the PS button to wake your PS5 and start playing.")
+                            }
                             PillButton {
                                 visible: Qt.platform.os === "osx"
                                 text: qsTr("Use controller on this Mac  ·  Space")
@@ -784,6 +829,23 @@ Pane {
                 }
             }
         }
+    }
+
+    Rectangle {
+        id: psToast
+        function show(t) { psToastText.text = t; opacity = 1; psToastTimer.restart(); }
+        z: 50
+        opacity: 0
+        visible: opacity > 0
+        Behavior on opacity { NumberAnimation { duration: 200 } }
+        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 28 }
+        width: psToastText.implicitWidth + 40
+        height: 44
+        radius: 22
+        color: consolePane.cPanel
+        border.color: Qt.alpha(consolePane.cMint, 0.6)
+        Label { id: psToastText; anchors.centerIn: parent; color: consolePane.cInk; font.pixelSize: 14 }
+        Timer { id: psToastTimer; interval: 3500; onTriggered: psToast.opacity = 0 }
     }
 
     Popup {

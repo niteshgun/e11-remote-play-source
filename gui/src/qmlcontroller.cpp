@@ -22,6 +22,8 @@ static QVector<QPair<uint32_t, Qt::Key>> key_map = {
     { CHIAKI_CONTROLLER_BUTTON_OPTIONS, Qt::Key_Menu },
     { CHIAKI_CONTROLLER_BUTTON_L3, Qt::Key_F1},
     { CHIAKI_CONTROLLER_BUTTON_R3, Qt::Key_F2},
+    // e11: PS button on the Mac's controller wakes the PS5 and starts playing (handled by the home screen)
+    { CHIAKI_CONTROLLER_BUTTON_PS, Qt::Key_HomePage },
 };
 
 QmlController::QmlController(Controller *c, uint32_t shortcut, QObject *t, QObject *parent)
