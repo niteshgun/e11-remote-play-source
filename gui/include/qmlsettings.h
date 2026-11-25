@@ -83,6 +83,7 @@ class QmlSettings : public QObject
     Q_PROPERTY(bool mouseTouchEnabled READ mouseTouchEnabled WRITE setMouseTouchEnabled NOTIFY mouseTouchEnabledChanged)
     Q_PROPERTY(bool neuralUpscale READ neuralUpscale WRITE setNeuralUpscale NOTIFY neuralUpscaleChanged)
     Q_PROPERTY(bool cleanPicture READ cleanPicture WRITE setCleanPicture NOTIFY cleanPictureChanged)
+    Q_PROPERTY(bool proMotion READ proMotion WRITE setProMotion NOTIFY proMotionChanged)
     Q_PROPERTY(float cleanPictureStrength READ cleanPictureStrength WRITE setCleanPictureStrength NOTIFY cleanPictureStrengthChanged)
     Q_PROPERTY(bool showAspectControl READ showAspectControl WRITE setShowAspectControl NOTIFY showAspectControlChanged)
     Q_PROPERTY(bool retinaVivid READ retinaVivid WRITE setRetinaVivid NOTIFY retinaVividChanged)
@@ -557,6 +558,8 @@ public:
 
     bool neuralUpscale() const;
     void setNeuralUpscale(bool enabled);
+    bool proMotion() const;
+    void setProMotion(bool enabled);
     bool cleanPicture() const;
     void setCleanPicture(bool enabled);
     float cleanPictureStrength() const;
@@ -708,6 +711,7 @@ signals:
     void mouseTouchEnabledChanged();
     void neuralUpscaleChanged();
     void cleanPictureChanged();
+    void proMotionChanged();
     void cleanPictureStrengthChanged();
     void showAspectControlChanged();
     void retinaVividChanged();

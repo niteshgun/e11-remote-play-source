@@ -4,6 +4,7 @@
 #ifdef Q_OS_MACOS
 #include "macNeuralUpscale.h"
 #include "macNoiseFilter.h"
+#include "macFrameInterp.h"
 #endif
 #include "qmlsettings.h"
 #include "qmlmainwindow.h"
@@ -1170,8 +1171,20 @@ void QmlBackend::createSession(const StreamSessionConnectInfo &connect_info)
             pending_recovered_frame.storeRelaxed(1);
 
         const qint64 prepare_begin_us = static_cast<qint64>(chiaki_time_now_monotonic_us());
+        // e11 Pro Motion: the frame halfway between the previous real frame and this one, made
+        // from the original decoded frame before anything else touches it.
+        AVFrame *between = nullptr;
+#ifdef Q_OS_MACOS
+        if (MacFrameInterp::Enabled() && frame.frame->format == AV_PIX_FMT_VIDEOTOOLBOX) {
+            if (frame.recovered)
+                MacFrameInterp::Discontinuity();
+            else
+                between = MacFrameInterp::Interpolate(frame.frame);
+        }
+#endif
         if (!prepareFrameForPresentation(frame, use_opengl_renderer))
         {
+            av_frame_free(&between);
             av_frame_free(&frame.frame);
             return;
         }
@@ -1191,6 +1204,29 @@ void QmlBackend::createSession(const StreamSessionConnectInfo &connect_info)
 
         const qint64 delivery_us = static_cast<qint64>(chiaki_time_now_monotonic_us());
         QmlMainWindow *target_window = window;
+#ifdef Q_OS_MACOS
+        if (between) {
+            // Same look as the real frames: Neural Engine upscale when it is on, else a plain copy.
+            AVFrame *shown = MacNeuralUpscale::Enabled() ? MacNeuralUpscale::Process(between) : nullptr;
+            if (!shown)
+                shown = MacNoiseFilter::Download(between);
+            av_frame_free(&between);
+            if (shown) {
+                // in-between frame at this frame's time, the real frame half a frame later
+                const double d = frame.duration > 0.0 ? frame.duration : 1.0 / 60.0;
+                ChiakiFfmpegFrame mid = frame;
+                mid.frame = shown;
+                mid.recovered = false;
+                mid.duration = d / 2.0;
+                frame.pts += d / 2.0;
+                frame.duration = d / 2.0;
+                QMetaObject::invokeMethod(target_window, [target_window, mid, delivery_us]() mutable {
+                    target_window->presentFrame(mid, 0, delivery_us);
+                });
+            }
+        }
+#endif
+        av_frame_free(&between);
         QMetaObject::invokeMethod(target_window, [target_window, frame, frames_lost, delivery_us]() mutable {
             target_window->presentFrame(frame, frames_lost, delivery_us);
         });

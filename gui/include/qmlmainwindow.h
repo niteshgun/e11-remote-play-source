@@ -170,6 +170,11 @@ public:
     Q_INVOKABLE bool neuralUpscaleAvailable() const;
     Q_INVOKABLE QString neuralUpscaleStatus() const;
     Q_INVOKABLE bool cleanPictureAvailable() const;
+    Q_INVOKABLE bool proMotionAvailable() const;
+    Q_INVOKABLE QString proMotionStatus() const;
+    Q_INVOKABLE bool proMotionActive() const;
+    Q_INVOKABLE int proMotionSurplus() const;
+    Q_INVOKABLE int displayHz() const;
     Q_INVOKABLE QVariantList builtinLuts() const;
     Q_INVOKABLE QString lookLut() const;
     Q_INVOKABLE bool setLookLut(const QString &source);

@@ -8,12 +8,14 @@
 #include "macMouseAim.h"
 #include "macNeuralUpscale.h"
 #include "macNoiseFilter.h"
+#include "macFrameInterp.h"
 #include "macControllerSwitch.h"
 #endif
 #include <QCursor>
 #include <QDesktopServices>
 #include <QDir>
 #include <QUrl>
+#include <QScreen>
 #include "aiplayrecorder.h"
 #include "e11screenshot.h"
 #include <QSysInfo>
@@ -2845,6 +2847,59 @@ bool QmlMainWindow::setLookLut(const QString &source_in)
     return true;
 }
 
+bool QmlMainWindow::proMotionAvailable() const
+{
+#ifdef Q_OS_MACOS
+    return MacFrameInterp::Available();
+#else
+    return false;
+#endif
+}
+
+bool QmlMainWindow::proMotionActive() const
+{
+#ifdef Q_OS_MACOS
+    return session && MacFrameInterp::Enabled() && MacFrameInterp::Active();
+#else
+    return false;
+#endif
+}
+
+int QmlMainWindow::displayHz() const
+{
+    const int hz = screen() ? qRound(screen()->refreshRate()) : 60;
+    return hz > 0 ? hz : 60;
+}
+
+int QmlMainWindow::proMotionSurplus() const
+{
+    // generated frames per second this screen can't physically show (120 fps into a 60 Hz panel)
+    return proMotionActive() ? qMax(0, 120 - displayHz()) : 0;
+}
+
+QString QmlMainWindow::proMotionStatus() const
+{
+#ifdef Q_OS_MACOS
+    const int hz = screen() ? qRound(screen()->refreshRate()) : 0;
+    const QString display = hz > 0 ? tr("this screen: %1 Hz").arg(hz) : QString();
+    const QString note = (hz > 0 && hz < 100)
+        ? tr(" · you'll see the full 120 fps on a 120 Hz screen (MacBook Pro, 120 Hz monitor)") : QString();
+    if (!MacFrameInterp::Available())
+        return tr("Needs macOS 26 or later on Apple silicon");
+    if (!MacFrameInterp::Enabled())
+        return tr("Off · %1").arg(display);
+    if (MacFrameInterp::Starting())
+        return tr("Loading Apple's frame generation model…");
+    if (MacFrameInterp::Active())
+        return tr("On: 60 → 120 fps, %1 ms/frame · %2%3").arg(MacFrameInterp::LastProcessMs(), 0, 'f', 1).arg(display, note);
+    if (session)
+        return tr("On (waiting for frames, or switched itself off because it was too slow) · %1").arg(display);
+    return tr("On: starts with the stream · %1%2").arg(display, note);
+#else
+    return tr("Mac only");
+#endif
+}
+
 bool QmlMainWindow::cleanPictureAvailable() const
 {
 #ifdef Q_OS_MACOS
@@ -5471,6 +5526,8 @@ renderer_backend_ready:
         if (this->settings)
             MacNoiseFilter::SetStrength(this->settings->GetCleanPictureStrength());
         MacNoiseFilter::Reset();
+        MacFrameInterp::SetEnabled(this->settings && this->settings->GetProMotion());
+        MacFrameInterp::Reset();
 #endif
         if (this->settings && this->settings->GetRetinaVivid())
             setColorAdjust(0.0f, 1.05f, 1.15f, 0.0f);

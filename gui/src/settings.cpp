@@ -1020,6 +1020,16 @@ void Settings::SetLookLut(const QString &source)
 	settings.setValue("settings/look_lut", source);
 }
 
+bool Settings::GetProMotion() const
+{
+	// e11 Pro Motion (60 -> 120 fps frame generation). Off by default: adds ~8 ms and GPU work.
+	return settings.value("settings/pro_motion", false).toBool();
+}
+void Settings::SetProMotion(bool enabled)
+{
+	settings.setValue("settings/pro_motion", enabled);
+}
+
 bool Settings::GetCleanPicture() const
 {
 	// e11 "Clean picture" (Apple temporal noise filter). Off by default: opt-in, costs GPU time.

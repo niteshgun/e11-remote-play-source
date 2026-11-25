@@ -88,6 +88,8 @@ if(APPLE)
 		src/macNeuralUpscale.mm
 		include/macNoiseFilter.h
 		src/macNoiseFilter.mm
+		include/macFrameInterp.h
+		src/macFrameInterp.mm
 		include/macControllerSwitch.h
 		src/macControllerSwitch.mm
 		include/macWakeSleep.h

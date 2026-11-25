@@ -447,6 +447,8 @@ class Settings : public QObject
 		void SetNeuralUpscale(bool enabled);
 		QString GetLookLut() const;
 		void SetLookLut(const QString &source);
+		bool GetProMotion() const;
+		void SetProMotion(bool enabled);
 		bool GetCleanPicture() const;
 		void SetCleanPicture(bool enabled);
 		float GetCleanPictureStrength() const;

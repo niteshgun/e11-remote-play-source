@@ -2,6 +2,7 @@
 #ifdef Q_OS_MACOS
 #include "macNeuralUpscale.h"
 #include "macNoiseFilter.h"
+#include "macFrameInterp.h"
 #endif
 #include "sessionlog.h"
 
@@ -825,6 +826,20 @@ void QmlSettings::setNeuralUpscale(bool enabled)
     MacNeuralUpscale::SetEnabled(enabled);
 #endif
     emit neuralUpscaleChanged();
+}
+
+bool QmlSettings::proMotion() const
+{
+    return settings->GetProMotion();
+}
+
+void QmlSettings::setProMotion(bool enabled)
+{
+    settings->SetProMotion(enabled);
+#ifdef Q_OS_MACOS
+    MacFrameInterp::SetEnabled(enabled);
+#endif
+    emit proMotionChanged();
 }
 
 bool QmlSettings::cleanPicture() const

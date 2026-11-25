@@ -116,16 +116,21 @@ Window {
         onTriggered: { quickWindow.fps = Chiaki.window.takeFrameCount(); quickWindow.statsLine = quickWindow.statsText(); }
     }
     function statsText() {
-        // Honest number: frames that actually reached the screen this second (arrived minus dropped)
-        let shown = Math.max(0, fps - Chiaki.window.droppedFrames);
+        // Honest number: frames that actually reached the screen this second (arrived minus dropped).
+        // e11 Pro Motion doubles the frames; the ones a 60 Hz screen can't show aren't "drops".
+        let pm = Chiaki.window.proMotionActive();
+        let dropped = Math.max(0, Chiaki.window.droppedFrames - Chiaki.window.proMotionSurplus());
+        let shown = Math.max(0, Math.min(pm ? fps * 2 : fps, Chiaki.window.displayHz()) - dropped);
         let parts = [shown + " fps shown"];
         if (Chiaki.session) {
             parts.push(Chiaki.session.measuredBitrate.toFixed(1) + " Mbps");
             let loss = isFinite(Chiaki.session.averagePacketLoss) ? Chiaki.session.averagePacketLoss * 100 : 0;
             parts.push(loss.toFixed(1) + "% loss");
         }
-        if (Chiaki.window.droppedFrames > 0)
-            parts.push(Chiaki.window.droppedFrames + " dropped");
+        if (pm)
+            parts.push("Pro Motion");
+        if (dropped > 0)
+            parts.push(dropped + " dropped");
         return parts.join(" · ");
     }
 
@@ -287,7 +292,7 @@ Window {
                 return;
             }
             perf.sinceStepUp++;
-            let dropped = Chiaki.window.droppedFrames;
+            let dropped = Math.max(0, Chiaki.window.droppedFrames - Chiaki.window.proMotionSurplus());
             if (dropped >= 3) {
                 perf.badSeconds++;
                 perf.goodSeconds = 0;
@@ -944,6 +949,26 @@ Window {
                                 interval: 1000; repeat: true
                                 running: quickWindow.expanded && quickWindow.visible
                                 onTriggered: neuralStatus.text = Chiaki.window.neuralUpscaleStatus()
+                            }
+                        }
+                        // e11 Pro Motion: 60 -> 120 fps frame generation (Apple ML, macOS 26+)
+                        Toggle {
+                            text: qsTr("e11 Pro Motion (120 fps frame generation)")
+                            enabled: Chiaki.window.proMotionAvailable()
+                            checked: Chiaki.settings.proMotion && enabled
+                            onToggled: Chiaki.settings.proMotion = checked
+                        }
+                        Label {
+                            id: proMotionStatus
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            font.pixelSize: 11
+                            color: Qt.rgba(1, 1, 1, 0.55)
+                            text: Chiaki.window.proMotionStatus()
+                            Timer {
+                                interval: 1000; repeat: true
+                                running: quickWindow.expanded && quickWindow.visible
+                                onTriggered: proMotionStatus.text = Chiaki.window.proMotionStatus()
                             }
                         }
                         // e11: Clean picture (Apple ML temporal noise filter, macOS 26+)
