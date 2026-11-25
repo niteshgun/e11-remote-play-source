@@ -1,3 +1,8 @@
+// e11 Home: sidebar + console cards + controller / Enhance / Sound / Smooth play cards.
+// DeskCleaner palette: ground #07090c, panel #0b0e13, line #1e2530, ink #eef2f7, dim #8c97a6,
+// sky #5aa9ff, lilac #b79bff, mint #5fd3a6, lemon #f2c94c, pink #ff7ab8.
+// All console logic (connect, wake, PIN, hide/delete, PSN, discovery) is unchanged from before.
+import QtCore
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
@@ -8,6 +13,30 @@ import org.streetpea.chiaking
 Pane {
     padding: 0
     id: consolePane
+
+    readonly property color cGround: "#07090c"
+    readonly property color cPanel: "#0b0e13"
+    readonly property color cCard: "#0e1218"
+    readonly property color cLine: "#1e2530"
+    readonly property color cInk: "#eef2f7"
+    readonly property color cDim: "#8c97a6"
+    readonly property color cSky: "#5aa9ff"
+    readonly property color cLilac: "#b79bff"
+    readonly property color cMint: "#5fd3a6"
+    readonly property color cLemon: "#f2c94c"
+    readonly property color cPink: "#ff7ab8"
+    readonly property bool psnSignedIn: !!Chiaki.settings.psnAuthToken
+
+    background: Rectangle { color: consolePane.cGround }
+
+    // Shared with the in-stream quick menu (same category), so choices here apply to the next stream.
+    Settings {
+        id: e11prefs
+        category: "e11_quick_menu_v2"
+        property int enhanceMode: 1
+        property bool soundOnComputer: true
+    }
+
     StackView.onActivated: {
         forceActiveFocus(Qt.TabFocusReason);
         if(!Chiaki.autoConnect && !root.initialAsk && !Chiaki.window.directStream)
@@ -18,7 +47,7 @@ Pane {
             else if(Chiaki.settings.remotePlayAsk)
             {
                 if(!Chiaki.settings.psnRefreshToken || !Chiaki.settings.psnAuthToken || !Chiaki.settings.psnAuthTokenExpiry || !Chiaki.settings.psnAccountId)
-                    root.showRemindDialog(qsTr("Remote Play via PSN"), qsTr("Would you like to connect to PSN?\nThis enables:\n- Automatic registration\n- Playing outside of your home network without port forwarding?") + "\n\n" + qsTr("(Note: If you select no now and want to do this later, go to the Config section of the settings.)"), true, () => root.showPSNTokenDialog(false));
+                    root.showRemindDialog(qsTr("Play from anywhere"), qsTr("Sign in with PlayStation Network to:\n- link your PS5 automatically\n- play outside your home network\n\nA secure sign-in window opens and e11 picks up the result by itself.") + "\n\n" + qsTr("(You can also do this later from the sidebar.)"), true, () => root.showPSNTokenDialog(false));
                 else
                     Chiaki.settings.remotePlayAsk = false;
             }
@@ -68,383 +97,147 @@ Pane {
         }
     }
 
-    ToolBar {
-        id: toolBar
-        anchors {
-            top: parent.top
-            left: parent.left
-            right: parent.right
-        }
-        height: 80
-
-        RowLayout {
-            anchors {
-                fill: parent
-                leftMargin: 10
-                rightMargin: 10
-            }
-
-            Button {
-                Layout.fillHeight: true
-                Layout.preferredWidth: 100
-                flat: true
-                text: "×"
-                font.pixelSize: 60
-                focusPolicy: Qt.NoFocus
-                onClicked: Qt.quit()
-                Material.roundedScale: Material.SmallScale
-            }
-
-            Item { Layout.fillWidth: true }
-
-            Button {
-                Layout.fillHeight: true
-                Layout.preferredWidth: 350
-                flat: true
-                text: "Create Steam Shortcut"
-                focusPolicy: Qt.NoFocus
-                onClicked: root.showSteamShortcutDialog(false)
-                Material.roundedScale: Material.SmallScale
-                visible: typeof Chiaki.createSteamShortcut === "function"
-                Image {
-                    anchors {
-                        right: parent.right
-                        verticalCenter: parent.verticalCenter
-                        leftMargin: 12
-                    }
-                    width: 28
-                    height: 28
-                    sourceSize: Qt.size(width, height)
-                    source: "qrc:/icons/l3.svg"
-                }
-            }
-
-            Button {
-                Layout.fillHeight: true
-                Layout.preferredWidth: 400
-                flat: true
-                text: "Refresh PSN Hosts"
-                icon.source: "qrc:/icons/r1.svg"
-                focusPolicy: Qt.NoFocus
-                onClicked: Chiaki.refreshPsnToken();
-                Material.roundedScale: Material.SmallScale
-                visible: Chiaki.settings.psnAuthToken
-            }
-
-            Button {
-                Layout.fillHeight: true
-                Layout.preferredWidth: 400
-                flat: true
-                focusPolicy: Qt.NoFocus
-                Material.roundedScale: Material.SmallScale
-                visible: !Chiaki.settings.psnAuthToken
-            }
-
-            Button {
-                Layout.fillHeight: true
-                Layout.preferredWidth: 300
-                flat: true
-                text: "Add Manual Host"
-                focusPolicy: Qt.NoFocus
-                onClicked: root.showManualHostDialog()
-                Material.roundedScale: Material.SmallScale
-                Image {
-                    anchors {
-                        left: parent.left
-                        verticalCenter: parent.verticalCenter
-                        leftMargin: 12
-                    }
-                    width: 28
-                    height: 28
-                    sourceSize: Qt.size(width, height)
-                    source: "qrc:/icons/r3.svg"
-                }
-            }
-
-            Button {
-                id: settingsButton
-                Layout.fillHeight: true
-                Layout.preferredWidth: 100
-                flat: true
-                icon.source: "qrc:/icons/settings-20px.svg";
-                icon.width: 50
-                icon.height: 50
-                focusPolicy: Qt.NoFocus
-                onClicked: root.showSettingsDialog()
-                Material.roundedScale: Material.SmallScale
-            }
-        }
+    // ---------- small building blocks ----------
+    component Ring: Rectangle {
+        property color tint: consolePane.cSky
+        width: 12; height: 12; radius: 6
+        color: "transparent"
+        border.width: 2
+        border.color: tint
     }
 
-    ListView {
-        id: hostsView
-        keyNavigationWraps: true
-        anchors {
-            top: toolBar.bottom
-            left: parent.left
-            right: parent.right
-            bottom: parent.bottom
-            bottomMargin: 50
-        }
-        clip: true
-        model: Chiaki.hosts
-        onCountChanged: {
-            if(!hostsView.currentItem)
-                hostsView.incrementCurrentIndex();
-            if(!hostsView.currentItem)
-                return;
-            if(!hostsView.currentItem.visible)
-            {
-                for(var i = 0; i < hostsView.count; i++)
-                {
-                    hostsView.incrementCurrentIndex()
-                    if(hostsView.currentItem.visible)
-                    {
-                        break;
-                    }
-                }
-            }
-        }
-        delegate: ItemDelegate {
-            visible: modelData.display
-            id: delegate
-            width: parent ? parent.width : 0
-            height: modelData.display ? 180 : 0
-            highlighted: ListView.isCurrentItem
-            onClicked: connectToHost()
-
-            function connectToHost() {
-                if(modelData.discovered)
-                    Chiaki.connectToHost(index, modelData.name);
-                else
-                    Chiaki.connectToHost(index);
-            }
-
-            function wakeUpHost() {
-                if(!modelData.discovered && !modelData.duid)
-                    Chiaki.wakeUpHost(index);
-            }
-
-            function deleteHost() {
-                if (modelData.manual)
-                    root.showConfirmDialog(qsTr("Delete Console"), qsTr("Are you sure you want to delete this console?"), () => {Chiaki.deleteHost(index)});
-                        
-                else if (modelData.discovered && !modelData.registered)
-                    root.showConfirmDialog(qsTr("Hide Console"), qsTr("Are you sure you want to hide this console?") + "\n\n" + qsTr("Note: You can unhide from the Consoles section of the Settings under Hidden Consoles"), () => Chiaki.hideHost(modelData.mac, modelData.name));
-
-            }
-
-            function setConsolePin() {
-                root.showConsolePinDialog(index);
-            }
-
-            RowLayout {
-                anchors {
-                    fill: parent
-                    leftMargin: 30
-                    rightMargin: 10
-                    topMargin: 10
-                    bottomMargin: 10
-                }
-                spacing: 50
-
-                Image {
-                    Layout.fillHeight: true
-                    Layout.preferredWidth: 150
-                    fillMode: Image.PreserveAspectFit
-                    source: "image://svg/console-ps" + (modelData.ps5 ? "5" : "4") + (modelData.state == "standby" ? "#light_standby" : "#light_on")
-                    sourceSize: Qt.size(width, height)
-                }
-
-                Label {
-                    Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
-                    text: {
-                        let t = "";
-                        if (modelData.name)
-                            t += modelData.name + "\n";
-                        if (modelData.address)
-                            t += qsTr("Address: %1").arg(Chiaki.settings.streamerMode ? "hidden" : modelData.address);
-                        if (modelData.mac)
-                            t += "\n" + qsTr("ID: %1 (%2)").arg(Chiaki.settings.streamerMode ? "hidden" : modelData.mac).arg(modelData.registered ? qsTr("registered") : qsTr("unregistered"));
-                        if (modelData.duid)
-                        {
-                            if(modelData.discovered)
-                                t += "\n" + qsTr("Automatic Registration Available");
-                            else
-                                t += "\n" + qsTr("Remote Connection via PSN");
-                        } 
-                        else
-                        {
-                            t += "\n";
-                            if(modelData.discovered)
-                            {
-                                if(modelData.manual)
-                                    t += qsTr("discovered + manual")
-                                else
-                                    t += qsTr("discovered");
-                            }
-                            else
-                                t += qsTr("manual");
-                        }
-                        return t;
-                    }
-                }
-
-                Label {
-                    Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
-                    text: {
-                        let t = "";
-                        if(modelData.duid)
-                            return t;
-                        t += qsTr("State: %1").arg(modelData.state);
-                        if(!modelData.discovered)
-                            return t;
-                        if (modelData.app)
-                            t += "\n" + qsTr("App: %1").arg(modelData.app);
-                        if (modelData.titleId)
-                            t += "\n" + qsTr("Title ID: %1").arg(modelData.titleId);
-                        return t;
-                    }
-                }
-
-                Item { Layout.fillWidth: true }
-
-                ColumnLayout {
-                    Layout.fillHeight: true
-                    spacing: 0
-
-                    Button {
-                        Layout.alignment: Qt.AlignCenter
-                        text: modelData.manual ? qsTr("Delete") : qsTr("Hide")
-                        flat: true
-                        padding: 20
-                        leftPadding: delegate.highlighted ? 50 : undefined
-                        focusPolicy: Qt.NoFocus
-                        visible: modelData.manual || (modelData.discovered && !modelData.registered)
-                        onClicked: delegate.deleteHost()
-                        Material.roundedScale: Material.SmallScale
-
-                        Image {
-                            anchors {
-                                left: parent.left
-                                verticalCenter: parent.verticalCenter
-                                leftMargin: 12
-                            }
-                            width: 28
-                            height: 28
-                            sourceSize: Qt.size(width, height)
-                            source: root.controllerButton("box")
-                            visible: delegate.highlighted
-                        }
-                    }
-
-                    Button {
-                        Layout.alignment: Qt.AlignCenter
-                        text: qsTr("Wake Up")
-                        flat: true
-                        padding: 20
-                        leftPadding: delegate.highlighted ? 50 : undefined
-                        visible: modelData.registered && !modelData.duid && !modelData.discovered
-                        focusPolicy: Qt.NoFocus
-                        onClicked: delegate.wakeUpHost()
-                        Material.roundedScale: Material.SmallScale
-
-                        Image {
-                            anchors {
-                                left: parent.left
-                                verticalCenter: parent.verticalCenter
-                                leftMargin: 12
-                            }
-                            width: 28
-                            height: 28
-                            sourceSize: Qt.size(width, height)
-                            source: root.controllerButton("pyramid")
-                            visible: delegate.highlighted
-                        }
-                    }
-
-                    Button {
-                        Layout.alignment: Qt.AlignCenter
-                        text: qsTr("Update Console Pin")
-                        flat: true
-                        padding: 20
-                        leftPadding: delegate.highlighted ? 50 : undefined
-                        visible: modelData.registered
-                        focusPolicy: Qt.NoFocus
-                        onClicked: delegate.setConsolePin()
-                        Material.roundedScale: Material.SmallScale
-
-                        Image {
-                            anchors {
-                                left: parent.left
-                                verticalCenter: parent.verticalCenter
-                                leftMargin: 12
-                            }
-                            width: 28
-                            height: 28
-                            sourceSize: Qt.size(width, height)
-                            source: "qrc:/icons/l1.svg"
-                            visible: delegate.highlighted
-                        }
-                    }
-                } 
-            } 
-        }
-    }     
-
-    RoundButton {
-        anchors {
-            left: parent.left
-            bottom: parent.bottom
-            margins: 20
-        }
-        icon.source: "qrc:/icons/discover-" + (checked ? "" : "off-") + "24px.svg"
-        icon.width: 50
-        icon.height: 50
-        padding: 20
+    component NavItem: AbstractButton {
+        id: nav
+        property color tint: consolePane.cSky
+        property bool active: false
+        property string detail: ""
+        Layout.fillWidth: true
+        implicitHeight: 40
         focusPolicy: Qt.NoFocus
-        checkable: true
-        checked: Chiaki.discoveryEnabled
-        onToggled: Chiaki.discoveryEnabled = !Chiaki.discoveryEnabled
-        Material.background: Material.accent
-    }
-
-    Label {
-        anchors {
-            right: parent.right
-            bottom: parent.bottom
-            margins: 20
+        hoverEnabled: true
+        background: Rectangle {
+            radius: 10
+            color: nav.active ? Qt.alpha(consolePane.cSky, 0.12) : (nav.hovered ? Qt.alpha("#ffffff", 0.04) : "transparent")
         }
-        text: Qt.application.version
-    }
-
-    Image {
-        id: logoImage
-        anchors.centerIn: parent
-        source: "qrc:/icons/chiaking-logo-white.svg"
-        width: Math.min(parent.width, parent.height) / 2
-        height: width
-        fillMode: Image.PreserveAspectFit
-        sourceSize.width: width * 2
-
-        PropertyAnimation {
-            target: logoImage
-            property: "opacity"
-            from: 0.05
-            to: 0.20
-            duration: 1000
-            easing.type: Easing.OutCubic
-            running: true
+        contentItem: RowLayout {
+            spacing: 12
+            Item { implicitWidth: 2 }
+            Ring { tint: nav.tint }
+            Label {
+                Layout.fillWidth: true
+                text: nav.text
+                color: nav.active ? consolePane.cInk : "#b3bdc9"
+                font.pixelSize: 14
+                font.weight: nav.active ? Font.DemiBold : Font.Normal
+                elide: Text.ElideRight
+            }
+            Label {
+                visible: nav.detail !== ""
+                text: nav.detail
+                color: consolePane.cDim
+                font.pixelSize: 11
+            }
+            Item { implicitWidth: 2 }
         }
     }
 
-    // e11: controller card on the main screen (no background Bluetooth scanning)
-    Rectangle {
+    component Chip: AbstractButton {
+        id: chip
+        property color tint: consolePane.cSky
+        property color onInk: "#07131f"
+        property bool on: false
+        focusPolicy: Qt.NoFocus
+        hoverEnabled: true
+        implicitHeight: 30
+        implicitWidth: chipLabel.implicitWidth + 26
+        background: Rectangle {
+            radius: height / 2
+            color: chip.on ? chip.tint : (chip.hovered ? Qt.alpha("#ffffff", 0.05) : "transparent")
+            border.width: chip.on ? 0 : 1
+            border.color: consolePane.cLine
+        }
+        contentItem: Label {
+            id: chipLabel
+            text: chip.text
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            font.pixelSize: 12
+            font.weight: chip.on ? Font.Bold : Font.Normal
+            color: chip.on ? chip.onInk : consolePane.cDim
+        }
+    }
+
+    component PillButton: AbstractButton {
+        id: pill
+        property color tint: consolePane.cSky
+        property bool filled: false
+        focusPolicy: Qt.NoFocus
+        hoverEnabled: true
+        implicitHeight: 40
+        implicitWidth: pillLabel.implicitWidth + 36
+        background: Rectangle {
+            radius: 12
+            color: pill.filled ? (pill.down ? Qt.darker(pill.tint, 1.15) : pill.tint)
+                               : (pill.hovered ? Qt.alpha(pill.tint, 0.10) : "transparent")
+            border.width: pill.filled ? 0 : 1.5
+            border.color: Qt.alpha(pill.tint, 0.7)
+        }
+        contentItem: Label {
+            id: pillLabel
+            text: pill.text
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            font.pixelSize: 14
+            font.weight: Font.Bold
+            color: pill.filled ? "#07131f" : pill.tint
+        }
+    }
+
+    component LinkText: Label {
+        id: lt
+        signal activated()
+        property color tint: consolePane.cSky
+        color: ltMouse.containsMouse ? Qt.lighter(lt.tint, 1.25) : lt.tint
+        font.pixelSize: 12
+        font.weight: Font.DemiBold
+        MouseArea { id: ltMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: lt.activated() }
+    }
+
+    component Card: Rectangle {
+        property color tint: consolePane.cSky
+        radius: 16
+        color: "transparent"
+        border.width: 1.5
+        border.color: Qt.alpha(tint, 0.55)
+    }
+
+    component Check: RowLayout {
+        id: chk
+        property bool ok: true
+        property string label: ""
+        spacing: 6
+        Rectangle {
+            width: 16; height: 16; radius: 8
+            color: chk.ok ? Qt.alpha(consolePane.cMint, 0.18) : Qt.alpha(consolePane.cLemon, 0.18)
+            Label {
+                anchors.centerIn: parent
+                text: chk.ok ? "✓" : "!"
+                font.pixelSize: 10
+                font.bold: true
+                color: chk.ok ? consolePane.cMint : consolePane.cLemon
+            }
+        }
+        Label {
+            text: chk.label
+            font.pixelSize: 13
+            color: chk.ok ? consolePane.cInk : consolePane.cLemon
+        }
+    }
+
+    // ---------- controller + smooth play state (polled only on this screen) ----------
+    QtObject {
         id: controllerCard
         property int tick: 0
-        // Only poll on the main screen, never while streaming
-        Timer { interval: 2000; repeat: true; running: !Chiaki.session && consolePane.visible; triggeredOnStart: true
-                onTriggered: { controllerCard.tick++; controllerCard.smoothState = Chiaki.window.smoothPlayStatus(); } }
         property var smoothState: ({ bluetoothOn: false, airdropOn: false, handoffOn: false })
         readonly property bool anyWired: {
             tick;
@@ -456,10 +249,10 @@ Pane {
         readonly property bool smoothOk: anyWired && !smoothState.bluetoothOn && !smoothState.airdropOn && !smoothState.handoffOn
         function line(c) {
             tick;
-            let parts = [c.friendlyName(), c.wired() ? qsTr("USB") : qsTr("Bluetooth")];
+            let parts = [c.friendlyName(), c.wired() ? qsTr("USB-C") : qsTr("Bluetooth")];
             let b = c.batteryPercent();
-            if (!c.wired() && b >= 0)
-                parts.push(b + "%");
+            if (b >= 0)
+                parts.push(qsTr("battery %1%").arg(b));
             return parts.join(" · ");
         }
         readonly property bool psOnUsb: {
@@ -471,170 +264,583 @@ Pane {
             }
             return false;
         }
-        z: 5
-        anchors {
-            horizontalCenter: parent.horizontalCenter
-            bottom: parent.bottom
-            bottomMargin: 24
-        }
-        width: Math.min(parent.width - 120, 680)
-        implicitHeight: cardCol.implicitHeight + 24
-        height: implicitHeight
-        radius: 14
-        color: Qt.rgba(0.08, 0.08, 0.10, 0.88)
-        border.color: Chiaki.controllers.length > 0 ? Qt.rgba(0.35, 0.82, 0.48, 0.55) : Qt.rgba(1, 1, 1, 0.16)
-        border.width: 1
+    }
+    Timer { interval: 2000; repeat: true; running: !Chiaki.session && consolePane.visible; triggeredOnStart: true
+            onTriggered: { controllerCard.tick++; controllerCard.smoothState = Chiaki.window.smoothPlayStatus(); } }
+    Shortcut {
+        sequence: "Space"
+        context: Qt.WindowShortcut
+        enabled: !Chiaki.session && Qt.platform.os === "osx"
+        onActivated: switchStatus.text = Chiaki.window.controllerToMac()
+    }
 
-        ColumnLayout {
-            id: cardCol
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.margins: 12
-            spacing: 6
+    RowLayout {
+        anchors.fill: parent
+        spacing: 0
 
-            RowLayout {
-                Layout.fillWidth: true
-                visible: Chiaki.controllers.length === 0
-                Label {
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                    color: "white"
-                    font.pixelSize: 14
-                    text: qsTr("🎮  Connect your controller: plug it in with USB-C, or pair it over Bluetooth.")
+        // ---------- sidebar ----------
+        Rectangle {
+            Layout.fillHeight: true
+            Layout.preferredWidth: 248
+            color: consolePane.cPanel
+            Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: consolePane.cLine }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 18
+                anchors.topMargin: 26
+                spacing: 4
+
+                Image {
+                    source: "qrc:/icons/e11-wordmark.png"
+                    Layout.preferredHeight: 44
+                    Layout.preferredWidth: 44 * sourceSize.width / Math.max(1, sourceSize.height)
+                    Layout.leftMargin: 8
+                    Layout.bottomMargin: 22
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true; mipmap: true
                 }
-                Button {
-                    text: qsTr("Bluetooth settings")
-                    flat: true
-                    onClicked: Chiaki.window.openBluetoothSettings()
+
+                NavItem { text: qsTr("Play"); tint: consolePane.cSky; active: true }
+                NavItem {
+                    text: Chiaki.discoveryEnabled ? qsTr("Finding consoles") : qsTr("Find consoles")
+                    detail: Chiaki.discoveryEnabled ? qsTr("on") : qsTr("off")
+                    tint: consolePane.cLilac
+                    onClicked: Chiaki.discoveryEnabled = !Chiaki.discoveryEnabled
+                }
+                NavItem { text: qsTr("Add a console"); tint: consolePane.cMint; onClicked: root.showManualHostDialog() }
+                NavItem {
+                    text: consolePane.psnSignedIn ? qsTr("Refresh PSN consoles") : qsTr("Sign in with PSN")
+                    tint: consolePane.cPink
+                    onClicked: consolePane.psnSignedIn ? Chiaki.refreshPsnToken() : root.showPSNTokenDialog(false)
+                }
+
+                Label {
+                    text: qsTr("STREAM")
+                    color: consolePane.cDim
+                    font.pixelSize: 10
+                    font.letterSpacing: 1.6
+                    font.weight: Font.DemiBold
+                    Layout.leftMargin: 10
+                    Layout.topMargin: 18
+                    Layout.bottomMargin: 4
+                }
+                NavItem { text: qsTr("Smooth play"); tint: consolePane.cLemon; onClicked: smoothPopup.open() }
+                NavItem {
+                    text: qsTr("Steam shortcut"); tint: consolePane.cSky
+                    visible: typeof Chiaki.createSteamShortcut === "function"
+                    onClicked: root.showSteamShortcutDialog(false)
+                }
+
+                Item { Layout.fillHeight: true }
+
+                NavItem { id: settingsButton; text: qsTr("Settings"); tint: consolePane.cDim; onClicked: root.showSettingsDialog() }
+                NavItem { text: qsTr("Quit"); tint: consolePane.cDim; onClicked: Qt.quit() }
+                Label {
+                    text: qsTr("e11 Remote Play %1").arg(Qt.application.version)
+                    color: Qt.alpha(consolePane.cDim, 0.7)
+                    font.pixelSize: 10
+                    Layout.leftMargin: 10
+                    Layout.topMargin: 8
                 }
             }
-            Repeater {
-                model: Chiaki.controllers
-                delegate: RowLayout {
-                    required property var modelData
+        }
+
+        // ---------- main ----------
+        Flickable {
+            id: mainFlick
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+            contentWidth: width
+            contentHeight: mainCol.implicitHeight + 72
+            boundsBehavior: Flickable.StopAtBounds
+            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+
+            ColumnLayout {
+                id: mainCol
+                x: 44
+                y: 36
+                width: Math.min(mainFlick.width - 88, 1100)
+                spacing: 20
+
+                RowLayout {
                     Layout.fillWidth: true
-                    Rectangle { width: 9; height: 9; radius: 4.5; color: "#5ad17a" }
-                    Label {
+                    ColumnLayout {
+                        spacing: 4
+                        Label {
+                            text: hostsView.visibleCount > 0 ? qsTr("Ready to play") : qsTr("Let's find your PS5")
+                            color: consolePane.cInk
+                            font.pixelSize: 32
+                            font.weight: Font.Black
+                        }
+                        Label {
+                            text: (consolePane.psnSignedIn ? qsTr("Signed in with PSN") : qsTr("Home network only"))
+                                  + (Chiaki.discoveryEnabled ? qsTr(" · looking for consoles") : "")
+                            color: consolePane.cDim
+                            font.pixelSize: 14
+                        }
+                    }
+                    Item { Layout.fillWidth: true }
+                    PillButton { text: qsTr("Add a console"); tint: consolePane.cSky; onClicked: root.showManualHostDialog() }
+                }
+
+                // ---------- consoles ----------
+                ListView {
+                    id: hostsView
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: contentHeight
+                    interactive: false
+                    keyNavigationWraps: true
+                    spacing: 14
+                    model: Chiaki.hosts
+                    property int visibleCount: 0
+                    function recount() {
+                        let n = 0;
+                        for (let i = 0; i < count; i++) {
+                            const it = itemAtIndex(i);
+                            if (it && it.visible) n++;
+                        }
+                        visibleCount = n;
+                    }
+                    Timer { interval: 500; repeat: true; running: consolePane.visible; triggeredOnStart: true; onTriggered: hostsView.recount() }
+                    onCountChanged: {
+                        recount();
+                        if(!hostsView.currentItem)
+                            hostsView.incrementCurrentIndex();
+                        if(!hostsView.currentItem)
+                            return;
+                        if(!hostsView.currentItem.visible)
+                        {
+                            for(var i = 0; i < hostsView.count; i++)
+                            {
+                                hostsView.incrementCurrentIndex()
+                                if(hostsView.currentItem.visible)
+                                {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    delegate: ItemDelegate {
+                        id: delegate
+                        visible: modelData.display
+                        width: ListView.view ? ListView.view.width : 0
+                        height: modelData.display ? 132 : 0
+                        highlighted: ListView.isCurrentItem
+                        hoverEnabled: true
+                        padding: 0
+                        onClicked: connectToHost()
+
+                        readonly property string stateText: {
+                            if (modelData.duid && !modelData.discovered)
+                                return qsTr("Via PSN");
+                            if (modelData.state === "standby")
+                                return qsTr("Rest mode");
+                            if (modelData.state === "ready")
+                                return qsTr("Ready");
+                            return modelData.state ? modelData.state : qsTr("Saved");
+                        }
+                        readonly property color stateTint: modelData.state === "standby" ? consolePane.cLemon
+                                                          : (modelData.duid && !modelData.discovered) ? consolePane.cPink : consolePane.cMint
+
+                        function connectToHost() {
+                            if(modelData.discovered)
+                                Chiaki.connectToHost(index, modelData.name);
+                            else
+                                Chiaki.connectToHost(index);
+                        }
+
+                        function wakeUpHost() {
+                            if(!modelData.discovered && !modelData.duid)
+                                Chiaki.wakeUpHost(index);
+                        }
+
+                        function deleteHost() {
+                            if (modelData.manual)
+                                root.showConfirmDialog(qsTr("Delete Console"), qsTr("Are you sure you want to delete this console?"), () => {Chiaki.deleteHost(index)});
+                            else if (modelData.discovered && !modelData.registered)
+                                root.showConfirmDialog(qsTr("Hide Console"), qsTr("Are you sure you want to hide this console?") + "\n\n" + qsTr("Note: You can unhide from the Consoles section of the Settings under Hidden Consoles"), () => Chiaki.hideHost(modelData.mac, modelData.name));
+                        }
+
+                        function setConsolePin() {
+                            root.showConsolePinDialog(index);
+                        }
+
+                        background: Rectangle {
+                            radius: 18
+                            border.width: 1.5
+                            border.color: Qt.alpha(consolePane.cSky, delegate.highlighted || delegate.hovered ? 0.8 : 0.45)
+                            gradient: Gradient {
+                                GradientStop { position: 0; color: Qt.alpha(consolePane.cSky, delegate.hovered ? 0.11 : 0.07) }
+                                GradientStop { position: 1; color: Qt.alpha(consolePane.cSky, 0.015) }
+                            }
+                        }
+
+                        contentItem: RowLayout {
+                            spacing: 24
+                            Item { implicitWidth: 2 }
+                            Rectangle {
+                                Layout.preferredWidth: 92
+                                Layout.preferredHeight: 92
+                                radius: 20
+                                color: consolePane.cCard
+                                border.color: consolePane.cLine
+                                Image {
+                                    anchors.centerIn: parent
+                                    width: 64; height: 64
+                                    fillMode: Image.PreserveAspectFit
+                                    source: "image://svg/console-ps" + (modelData.ps5 ? "5" : "4") + (modelData.state == "standby" ? "#light_standby" : "#light_on")
+                                    sourceSize: Qt.size(width, height)
+                                }
+                            }
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 6
+                                RowLayout {
+                                    spacing: 10
+                                    Label {
+                                        text: modelData.name ? modelData.name : (modelData.ps5 ? "PS5" : "PS4")
+                                        color: consolePane.cInk
+                                        font.pixelSize: 22
+                                        font.weight: Font.Black
+                                    }
+                                    Rectangle {
+                                        implicitWidth: stateLabel.implicitWidth + 18
+                                        implicitHeight: 22
+                                        radius: 11
+                                        color: "transparent"
+                                        border.width: 1
+                                        border.color: Qt.alpha(delegate.stateTint, 0.55)
+                                        Label {
+                                            id: stateLabel
+                                            anchors.centerIn: parent
+                                            text: delegate.stateText.toUpperCase()
+                                            color: delegate.stateTint
+                                            font.pixelSize: 10
+                                            font.weight: Font.Bold
+                                            font.letterSpacing: 1.2
+                                        }
+                                    }
+                                }
+                                Label {
+                                    Layout.fillWidth: true
+                                    elide: Text.ElideRight
+                                    color: consolePane.cDim
+                                    font.pixelSize: 13
+                                    text: {
+                                        let parts = [];
+                                        if (modelData.duid)
+                                            parts.push(modelData.discovered ? qsTr("Links automatically with PSN") : qsTr("Plays from anywhere via PSN"));
+                                        else if (modelData.discovered)
+                                            parts.push(modelData.manual ? qsTr("On your network · saved") : qsTr("On your network"));
+                                        else
+                                            parts.push(qsTr("Saved console"));
+                                        if (modelData.address)
+                                            parts.push(Chiaki.settings.streamerMode ? qsTr("address hidden") : modelData.address);
+                                        if (modelData.mac && !modelData.registered)
+                                            parts.push(qsTr("not linked yet"));
+                                        return parts.join("  ·  ");
+                                    }
+                                }
+                                Label {
+                                    visible: !!(modelData.discovered && modelData.app)
+                                    text: qsTr("Playing: %1").arg(modelData.app)
+                                    color: consolePane.cLilac
+                                    font.pixelSize: 12
+                                }
+                                RowLayout {
+                                    spacing: 14
+                                    LinkText {
+                                        visible: modelData.registered && !modelData.duid && !modelData.discovered
+                                        text: qsTr("Wake up")
+                                        tint: consolePane.cSky
+                                        font.pixelSize: 12
+                                        onActivated: delegate.wakeUpHost()
+                                    }
+                                    LinkText {
+                                        visible: modelData.registered
+                                        text: qsTr("Console PIN")
+                                        tint: consolePane.cDim
+                                        font.pixelSize: 12
+                                        onActivated: delegate.setConsolePin()
+                                    }
+                                    LinkText {
+                                        visible: modelData.manual || (modelData.discovered && !modelData.registered)
+                                        text: (modelData.manual ? qsTr("Delete") : qsTr("Hide"))
+                                        tint: consolePane.cDim
+                                        font.pixelSize: 12
+                                        onActivated: delegate.deleteHost()
+                                    }
+                                }
+                            }
+                            PillButton {
+                                text: modelData.registered || modelData.duid ? qsTr("Play") : qsTr("Link & play")
+                                filled: true
+                                tint: consolePane.cSky
+                                implicitHeight: 54
+                                implicitWidth: Math.max(130, implicitContentWidth + 48)
+                                onClicked: delegate.connectToHost()
+                            }
+                            Item { implicitWidth: 6 }
+                        }
+                    }
+                }
+
+                // empty state
+                Card {
+                    visible: hostsView.visibleCount === 0
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 132
+                    tint: consolePane.cLilac
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 24
+                        spacing: 20
+                        BusyIndicator { running: Chiaki.discoveryEnabled; visible: Chiaki.discoveryEnabled; Layout.preferredWidth: 48; Layout.preferredHeight: 48 }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
+                            Label { text: Chiaki.discoveryEnabled ? qsTr("Looking for your PS5 on this network…") : qsTr("Console search is off"); color: consolePane.cInk; font.pixelSize: 18; font.weight: Font.Bold }
+                            Label {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                color: consolePane.cDim
+                                font.pixelSize: 13
+                                text: consolePane.psnSignedIn
+                                      ? qsTr("Make sure the PS5 is on or in rest mode. You can also refresh your PSN consoles from the sidebar.")
+                                      : qsTr("Make sure the PS5 is on or in rest mode and on the same Wi-Fi. Or sign in with PSN to play from anywhere.")
+                            }
+                        }
+                        PillButton {
+                            visible: !consolePane.psnSignedIn
+                            text: qsTr("Sign in with PSN")
+                            tint: consolePane.cPink
+                            onClicked: root.showPSNTokenDialog(false)
+                        }
+                        PillButton {
+                            visible: !Chiaki.discoveryEnabled
+                            text: qsTr("Turn on search")
+                            tint: consolePane.cLilac
+                            onClicked: Chiaki.discoveryEnabled = true
+                        }
+                    }
+                }
+
+                // ---------- controller / enhance / sound ----------
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: mainCol.width > 820 ? 3 : 1
+                    columnSpacing: 16
+                    rowSpacing: 16
+
+                    Card {
+                        tint: consolePane.cMint
                         Layout.fillWidth: true
-                        color: "white"
-                        font.pixelSize: 14
-                        text: "🎮  " + controllerCard.line(modelData) + qsTr("  ·  connected")
+                        Layout.preferredWidth: 1
+                        Layout.fillHeight: true
+                        implicitHeight: ctrlCol.implicitHeight + 36
+                        ColumnLayout {
+                            id: ctrlCol
+                            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 18 }
+                            spacing: 8
+                            Label { text: qsTr("Controller"); color: consolePane.cMint; font.pixelSize: 15; font.weight: Font.Black }
+                            Label {
+                                visible: Chiaki.controllers.length === 0
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                text: qsTr("Plug your controller in with USB-C, or pair it over Bluetooth.")
+                                color: consolePane.cInk
+                                font.pixelSize: 13
+                            }
+                            Repeater {
+                                model: Chiaki.controllers
+                                delegate: RowLayout {
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    spacing: 8
+                                    Rectangle { width: 8; height: 8; radius: 4; color: consolePane.cMint }
+                                    Label { Layout.fillWidth: true; elide: Text.ElideRight; color: consolePane.cInk; font.pixelSize: 13; text: controllerCard.line(modelData) }
+                                }
+                            }
+                            PillButton {
+                                visible: Qt.platform.os === "osx"
+                                text: qsTr("Use controller on this Mac  ·  Space")
+                                tint: consolePane.cMint
+                                implicitHeight: 34
+                                onClicked: switchStatus.text = Chiaki.window.controllerToMac()
+                            }
+                            Label {
+                                id: switchStatus
+                                visible: Qt.platform.os === "osx"
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                font.pixelSize: 11
+                                color: consolePane.cDim
+                                text: qsTr("Moves the controller from the PS5 to this Mac. First time: hold Create + PS for 5 s, then pair it in Bluetooth settings.")
+                            }
+                            Label {
+                                visible: controllerCard.psOnUsb
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                font.pixelSize: 11
+                                color: consolePane.cLemon
+                                text: qsTr("Inputs doubled? On the PS5: Settings → Accessories → Controllers → Communication Method → Use USB Cable.")
+                            }
+                        }
+                    }
+
+                    Card {
+                        tint: consolePane.cPink
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                        Layout.fillHeight: true
+                        implicitHeight: enhCol.implicitHeight + 36
+                        ColumnLayout {
+                            id: enhCol
+                            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 18 }
+                            spacing: 10
+                            Label { text: qsTr("Enhance"); color: consolePane.cPink; font.pixelSize: 15; font.weight: Font.Black }
+                            RowLayout {
+                                spacing: 6
+                                Chip { text: qsTr("Off"); tint: consolePane.cPink; onInk: "#12060d"; on: e11prefs.enhanceMode === 0; onClicked: e11prefs.enhanceMode = 0 }
+                                Chip { text: qsTr("Auto"); tint: consolePane.cPink; onInk: "#12060d"; on: e11prefs.enhanceMode === 1; onClicked: e11prefs.enhanceMode = 1 }
+                                Chip { text: qsTr("Max"); tint: consolePane.cPink; onInk: "#12060d"; on: e11prefs.enhanceMode === 2; onClicked: e11prefs.enhanceMode = 2 }
+                            }
+                            Label {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                color: consolePane.cDim
+                                font.pixelSize: 12
+                                text: e11prefs.enhanceMode === 0 ? qsTr("Plain picture, exactly as the PS5 sends it.")
+                                     : e11prefs.enhanceMode === 1 ? qsTr("Sharper picture, steps back the moment it could add lag.")
+                                     : qsTr("Sharpest picture this Mac can keep up with.")
+                            }
+                        }
+                    }
+
+                    Card {
+                        tint: consolePane.cLemon
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                        Layout.fillHeight: true
+                        implicitHeight: soundCol.implicitHeight + 36
+                        ColumnLayout {
+                            id: soundCol
+                            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 18 }
+                            spacing: 10
+                            Label { text: qsTr("Sound"); color: consolePane.cLemon; font.pixelSize: 15; font.weight: Font.Black }
+                            RowLayout {
+                                spacing: 6
+                                Chip { text: qsTr("Mac + TV"); tint: consolePane.cLemon; onInk: "#1a1404"; on: e11prefs.soundOnComputer; onClicked: e11prefs.soundOnComputer = true }
+                                Chip { text: qsTr("TV only"); tint: consolePane.cLemon; onInk: "#1a1404"; on: !e11prefs.soundOnComputer; onClicked: e11prefs.soundOnComputer = false }
+                            }
+                            Label {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                color: consolePane.cDim
+                                font.pixelSize: 12
+                                text: e11prefs.soundOnComputer ? qsTr("Plays on this Mac and the TV, in sync. Mute the TV if you only want the Mac.")
+                                                               : qsTr("The Mac stays quiet; sound comes from the TV.")
+                            }
+                        }
+                    }
+                }
+
+                // ---------- smooth play ----------
+                Card {
+                    tint: consolePane.cLilac
+                    Layout.fillWidth: true
+                    implicitHeight: smoothCol.implicitHeight + 36
+                    ColumnLayout {
+                        id: smoothCol
+                        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 18 }
+                        spacing: 12
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Label {
+                                text: controllerCard.smoothOk ? qsTr("Smooth play: ready") : qsTr("Smooth play check")
+                                color: consolePane.cLilac
+                                font.pixelSize: 15
+                                font.weight: Font.Black
+                            }
+                            Item { Layout.fillWidth: true }
+                            LinkText {
+                                text: (controllerCard.smoothOk ? qsTr("Tips") : qsTr("Fix it for me"))
+                                tint: consolePane.cLilac
+                                font.pixelSize: 13
+                                onActivated: smoothPopup.open()
+                            }
+                        }
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 22
+                            Check { ok: controllerCard.anyWired; label: controllerCard.anyWired ? qsTr("USB-C controller") : qsTr("Controller not on USB-C") }
+                            Check { visible: Qt.platform.os === "osx"; ok: !controllerCard.smoothState.bluetoothOn; label: controllerCard.smoothState.bluetoothOn ? qsTr("Bluetooth on") : qsTr("Bluetooth off") }
+                            Check { visible: Qt.platform.os === "osx"; ok: !controllerCard.smoothState.airdropOn; label: controllerCard.smoothState.airdropOn ? qsTr("AirDrop on") : qsTr("AirDrop off") }
+                            Check { visible: Qt.platform.os === "osx"; ok: !controllerCard.smoothState.handoffOn; label: controllerCard.smoothState.handoffOn ? qsTr("Handoff on") : qsTr("Handoff off") }
+                        }
                     }
                 }
             }
-            // One click (or Space) pulls the controller from the PS5 over to this Mac (macOS only)
-            RowLayout {
-                visible: Qt.platform.os === "osx"
-                Layout.fillWidth: true
-                Button {
-                    id: toMacButton
-                    text: qsTr("🎮 Use controller on this Mac  (Space)")
-                    highlighted: true
-                    onClicked: switchStatus.text = Chiaki.window.controllerToMac()
-                }
-                Label {
-                    id: switchStatus
+        }
+    }
+
+    Popup {
+        id: smoothPopup
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(parent ? parent.width - 80 : 640, 640)
+        modal: true
+        focus: true
+        padding: 24
+        background: Rectangle { radius: 18; color: consolePane.cPanel; border.color: consolePane.cLine }
+        contentItem: ColumnLayout {
+            spacing: 14
+            Label { text: qsTr("Smooth play on Mac"); color: consolePane.cInk; font.pixelSize: 22; font.weight: Font.Black }
+            Label {
+                Layout.fillWidth: true; wrapMode: Text.WordWrap; color: consolePane.cDim; font.pixelSize: 13
+                text: qsTr("On a MacBook, Wi-Fi and Bluetooth share one radio. Anything else using it causes lag spikes and a jumpy controller.")
+            }
+            Repeater {
+                model: [
+                    { ok: controllerCard.anyWired, t: qsTr("1. Plug the controller into the Mac with USB-C"), d: qsTr("Wired is instant and never jumps to the PS5."), b: "" },
+                    { ok: !controllerCard.smoothState.bluetoothOn, t: qsTr("2. Turn Bluetooth off while you play"), d: qsTr("Frees the radio for Wi-Fi. Your USB-C controller keeps working."), b: "bt" },
+                    { ok: !(controllerCard.smoothState.airdropOn || controllerCard.smoothState.handoffOn), t: qsTr("3. Turn off AirDrop and Handoff"), d: qsTr("AirDrop: No One. Handoff: off. They make Wi-Fi hop channels every few seconds, the classic Mac stutter."), b: "ah" },
+                    { ok: true, t: qsTr("4. Still lagging? Plug the PS5 into your router with ethernet"), d: qsTr("Then only the Mac is on Wi-Fi. Stay close to the router."), b: "" }
+                ]
+                delegate: RowLayout {
+                    required property var modelData
+                    visible: Qt.platform.os === "osx" || modelData.b === ""
                     Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                    font.pixelSize: 11
-                    color: Qt.rgba(1, 1, 1, 0.7)
-                    text: qsTr("Switches the controller from the PS5 to this Mac. One-time setup: hold Circle + PS for 5 s, then connect it in Bluetooth settings.")
-                }
-            }
-            Shortcut {
-                sequence: "Space"
-                context: Qt.WindowShortcut
-                enabled: !Chiaki.session && Qt.platform.os === "osx"
-                onActivated: switchStatus.text = Chiaki.window.controllerToMac()
-            }
-            // e11: Smooth play checklist. Bluetooth + AirDrop/Handoff share the Mac's Wi-Fi radio and cause lag spikes.
-            Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(1, 1, 1, 0.10) }
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 10
-                Label {
-                    color: controllerCard.smoothOk ? "#5ad17a" : "#ffd9a8"
-                    font.pixelSize: 13
-                    font.bold: true
-                    text: controllerCard.smoothOk ? qsTr("✓ Smooth play ready") : qsTr("⚠ Smooth play")
-                }
-                Label { font.pixelSize: 12; color: controllerCard.anyWired ? "#5ad17a" : "#ffd9a8"
-                        text: (controllerCard.anyWired ? "✓" : "⚠") + qsTr(" USB-C") }
-                Label { visible: Qt.platform.os === "osx"; font.pixelSize: 12; color: controllerCard.smoothState.bluetoothOn ? "#ffd9a8" : "#5ad17a"
-                        text: controllerCard.smoothState.bluetoothOn ? qsTr("⚠ Bluetooth") : qsTr("✓ Bluetooth off") }
-                Label { visible: Qt.platform.os === "osx"; font.pixelSize: 12
-                        readonly property bool on: controllerCard.smoothState.airdropOn || controllerCard.smoothState.handoffOn
-                        color: on ? "#ffd9a8" : "#5ad17a"
-                        text: on ? qsTr("⚠ AirDrop/Handoff") : qsTr("✓ AirDrop/Handoff off") }
-                Item { Layout.fillWidth: true }
-                Button {
-                    text: controllerCard.smoothOk ? qsTr("Tips") : qsTr("Fix lag")
-                    flat: true
-                    onClicked: smoothPopup.open()
+                    spacing: 12
+                    Rectangle {
+                        Layout.alignment: Qt.AlignTop
+                        width: 20; height: 20; radius: 10
+                        color: Qt.alpha(modelData.ok ? consolePane.cMint : consolePane.cLemon, 0.18)
+                        Label { anchors.centerIn: parent; text: modelData.ok ? "✓" : "!"; font.pixelSize: 12; font.bold: true; color: modelData.ok ? consolePane.cMint : consolePane.cLemon }
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
+                        Label { Layout.fillWidth: true; wrapMode: Text.WordWrap; text: modelData.t; color: consolePane.cInk; font.pixelSize: 14; font.bold: true }
+                        Label { Layout.fillWidth: true; wrapMode: Text.WordWrap; text: modelData.d; color: consolePane.cDim; font.pixelSize: 12 }
+                    }
+                    PillButton {
+                        visible: modelData.b !== ""
+                        text: qsTr("Open")
+                        tint: consolePane.cSky
+                        implicitHeight: 32
+                        onClicked: modelData.b === "bt" ? Chiaki.window.openBluetoothSettings() : Chiaki.window.openAirDropHandoffSettings()
+                    }
                 }
             }
             Label {
-                visible: controllerCard.psOnUsb
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                font.pixelSize: 11
-                color: "#ffd9a8"
-                text: qsTr("Inputs doubled? Your PS5 may also be using this controller over Bluetooth. Fix once on the PS5: "
-                         + "Settings → Accessories → Controller (General) → Communication Method → Use USB Cable.")
+                Layout.fillWidth: true; wrapMode: Text.WordWrap; color: Qt.alpha(consolePane.cDim, 0.8); font.pixelSize: 11
+                text: qsTr("Game Mode turns on by itself in full screen and doubles Bluetooth polling. With Bluetooth off it doesn't matter.")
+                visible: Qt.platform.os === "osx"
             }
-        }
-
-        Popup {
-            id: smoothPopup
-            parent: Overlay.overlay
-            anchors.centerIn: parent
-            width: Math.min(parent ? parent.width - 80 : 640, 640)
-            modal: true
-            focus: true
-            padding: 22
-            background: Rectangle { radius: 16; color: Qt.rgba(0.08, 0.08, 0.10, 0.97); border.color: Qt.rgba(1, 1, 1, 0.15) }
-            contentItem: ColumnLayout {
-                spacing: 12
-                Label { text: qsTr("Smooth play on Mac"); color: "white"; font.pixelSize: 20; font.bold: true }
-                Label {
-                    Layout.fillWidth: true; wrapMode: Text.WordWrap; color: Qt.rgba(1, 1, 1, 0.75); font.pixelSize: 13
-                    text: qsTr("On a MacBook, Wi-Fi and Bluetooth share one radio. Anything else using it causes lag spikes and a jumpy controller.")
-                }
-                Repeater {
-                    model: [
-                        { ok: controllerCard.anyWired, t: qsTr("1. Plug the controller into the Mac with USB-C"), d: qsTr("Wired is instant and never jumps to the PS5."), b: "" },
-                        { ok: !controllerCard.smoothState.bluetoothOn, t: qsTr("2. Turn Bluetooth off while you play"), d: qsTr("Frees the radio for Wi-Fi. Your USB-C controller keeps working."), b: "bt" },
-                        { ok: !(controllerCard.smoothState.airdropOn || controllerCard.smoothState.handoffOn), t: qsTr("3. Turn off AirDrop and Handoff"), d: qsTr("AirDrop: No One. Handoff: off. They make Wi-Fi hop channels every few seconds, the classic Mac stutter."), b: "ah" },
-                        { ok: true, t: qsTr("4. Still lagging? Plug the PS5 into your router with ethernet"), d: qsTr("Then only the Mac is on Wi-Fi. Stay close to the router."), b: "" }
-                    ]
-                    delegate: RowLayout {
-                        required property var modelData
-                        visible: Qt.platform.os === "osx" || modelData.b === ""
-                        Layout.fillWidth: true
-                        spacing: 10
-                        Label { text: modelData.ok ? "✓" : "⚠"; color: modelData.ok ? "#5ad17a" : "#ffd9a8"; font.pixelSize: 18; Layout.alignment: Qt.AlignTop }
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-                            Label { Layout.fillWidth: true; wrapMode: Text.WordWrap; text: modelData.t; color: "white"; font.pixelSize: 14; font.bold: true }
-                            Label { Layout.fillWidth: true; wrapMode: Text.WordWrap; text: modelData.d; color: Qt.rgba(1, 1, 1, 0.65); font.pixelSize: 12 }
-                        }
-                        Button {
-                            visible: modelData.b !== ""
-                            text: qsTr("Open")
-                            flat: true
-                            onClicked: modelData.b === "bt" ? Chiaki.window.openBluetoothSettings() : Chiaki.window.openAirDropHandoffSettings()
-                        }
-                    }
-                }
-                Label {
-                    Layout.fillWidth: true; wrapMode: Text.WordWrap; color: Qt.rgba(1, 1, 1, 0.5); font.pixelSize: 11
-                    text: qsTr("Game Mode turns on by itself in full screen and doubles Bluetooth polling. With Bluetooth off it doesn't matter.")
-                    visible: Qt.platform.os === "osx"
-                }
-                Button { text: qsTr("Got it"); highlighted: true; Layout.alignment: Qt.AlignRight; onClicked: smoothPopup.close() }
-            }
+            PillButton { text: qsTr("Got it"); filled: true; tint: consolePane.cSky; Layout.alignment: Qt.AlignRight; onClicked: smoothPopup.close() }
         }
     }
 }
