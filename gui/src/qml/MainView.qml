@@ -35,6 +35,15 @@ Pane {
         category: "e11_quick_menu_v2"
         property int enhanceMode: 1
         property bool soundOnComputer: true
+        property bool fullHdDefaulted: false
+    }
+    // e11: always stream 1080p (the PS5's maximum), at home and over PSN; once, so a user's later choice is kept
+    Component.onCompleted: {
+        if (!e11prefs.fullHdDefaulted) {
+            e11prefs.fullHdDefaulted = true;
+            Chiaki.settings.resolutionLocalPS5 = 4;
+            Chiaki.settings.resolutionRemotePS5 = 4;
+        }
     }
 
     StackView.onActivated: {

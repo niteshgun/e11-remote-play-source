@@ -457,7 +457,7 @@ static const QMap<ChiakiVideoResolutionPreset, QString> resolutions = {
 
 static const ChiakiVideoResolutionPreset resolution_default_ps4 = CHIAKI_VIDEO_RESOLUTION_PRESET_720p;
 static const ChiakiVideoResolutionPreset resolution_default_ps5_local = CHIAKI_VIDEO_RESOLUTION_PRESET_1080p;
-static const ChiakiVideoResolutionPreset resolution_default_ps5_remote = CHIAKI_VIDEO_RESOLUTION_PRESET_720p;
+static const ChiakiVideoResolutionPreset resolution_default_ps5_remote = CHIAKI_VIDEO_RESOLUTION_PRESET_1080p; // e11: full HD over PSN too
 
 ChiakiVideoResolutionPreset Settings::GetResolutionLocalPS4() const
 {
