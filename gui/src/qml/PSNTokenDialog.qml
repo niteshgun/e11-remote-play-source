@@ -14,16 +14,22 @@ DialogView {
     property bool closing: false
     title: {
         if(expired)
-            qsTr("Credentials Expired: Refresh PSN Remote Connection")
+            qsTr("Sign in again with PlayStation Network")
         else
-            qsTr("Setup Automatic PSN Remote Connection")
+            qsTr("Sign in with PlayStation Network")
     }
     buttonText: qsTr("Setup")
     buttonEnabled: url.text.trim()
     buttonVisible: false
-    onAccepted: {
+    onAccepted: dialog.startAuth(url.text.trim())
+    property bool authStarted: false
+    function startAuth(u) {
+        if (authStarted)
+            return;
+        authStarted = true;
+        clipWatch.running = false;
         logDialog.open()
-        Chiaki.initPsnAuth(url.text.trim(), function(msg, ok, done) {
+        Chiaki.initPsnAuth(u, function(msg, ok, done) {
             if(ok)
                 Chiaki.settings.remotePlayAsk = false;
             if (!done)
@@ -32,6 +38,8 @@ DialogView {
             {
                 logArea.text += msg + "\n";
                 logDialog.standardButtons = Dialog.Close;
+                if (!ok)
+                    dialog.authStarted = false;
             }
         });
     }
@@ -39,7 +47,9 @@ DialogView {
         Chiaki.settings.remotePlayAsk = true;
         nativeTokenForm.visible = true;
         nativeTokenForm.forceActiveFocus(Qt.TabFocusReason);
-        if(Qt.platform.os == "linux" || Qt.platform.os == "osx")
+        // e11: on Mac the sign-in opens inside the app and the result is picked up
+        // automatically (no copy/paste). Linux keeps the external browser.
+        if(Qt.platform.os == "linux")
             extBrowserButton.clicked();
     }
     function close() {
@@ -94,7 +104,7 @@ DialogView {
                         Layout.fillHeight: true
                         Layout.preferredWidth: 350
                         flat: true
-                        text: "reload + clear cookies"
+                        text: qsTr("Start over")
                         Image {
                             anchors {
                                 left: parent.left
@@ -137,7 +147,7 @@ DialogView {
                             source: "qrc:/icons/r1.svg"
                         }
                         focusPolicy: Qt.NoFocus
-                        text: "Use external browser"
+                        text: qsTr("Use my browser instead")
                         onClicked: {
                             nativeTokenForm.visible = false;
                             psnTokenToolbar.visible = false;
@@ -152,7 +162,34 @@ DialogView {
                                 openurl.copy();
                             }
                             pasteUrl.forceActiveFocus(Qt.TabFocusReason);
+                            clipWatch.running = true;
                         }
+                    }
+                }
+            }
+            // e11: when the browser sign-in finishes, the user only copies the final
+            // address and comes back; we read the clipboard once when the app is
+            // active again (no polling, so no repeated paste prompts) and continue.
+            TextField { id: clipProbe; visible: false }
+            Item {
+                id: clipWatch
+                property bool running: false
+                function check() {
+                    if (!running)
+                        return;
+                    clipProbe.text = "";
+                    clipProbe.paste();
+                    const t = clipProbe.text.trim();
+                    if (t && Chiaki.checkPsnRedirectURL(t)) {
+                        url.text = t;
+                        dialog.startAuth(t);
+                    }
+                }
+                Connections {
+                    target: Qt.application
+                    function onStateChanged() {
+                        if (Qt.application.state === Qt.ApplicationActive)
+                            clipWatch.check();
                     }
                 }
             }
@@ -263,16 +300,7 @@ DialogView {
                             onContextMenuRequested: (request) => request.accepted = true;
                             onNavigationRequested: (request) => {
                                 if (Chiaki.checkPsnRedirectURL(request.url)) {
-                                    logDialog.open()
-                                    Chiaki.initPsnAuth(request.url, function(msg, ok, done) {
-                                        if (!done)
-                                            logArea.text += msg + '\n';
-                                        else
-                                        {
-                                            logArea.text += msg + '\n';
-                                            logDialog.standardButtons = Dialog.Close;
-                                        }
-                                    });
+                                    dialog.startAuth(request.url);
                                     request.reject();
                                 }
                                 else
@@ -329,7 +357,9 @@ DialogView {
             }
 
             Label {
-                text: qsTr("Redirect URL from Web Browser")
+                Layout.maximumWidth: 420
+                wrapMode: Text.WordWrap
+                text: qsTr("Sign in in your browser. When it shows a blank page, copy its address. e11 picks it up by itself.")
             }
 
             TextField {

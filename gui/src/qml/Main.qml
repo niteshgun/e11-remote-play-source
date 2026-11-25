@@ -12,7 +12,8 @@ Item {
     readonly property bool preferSeparateStreamSettingsWindows: Chiaki.window.runtimeRendererBackend === 1 && Chiaki.session
     property bool useSeparateStreamSettingsWindows: false
     Material.theme: Material.Dark
-    Material.accent: "#00a7ff"
+    Material.accent: "#5aa9ff"
+    Material.background: "#07090c"
 
     function controllerButton(name) {
         let type = "deck";
@@ -635,5 +636,11 @@ Item {
     Component {
         id: controllerMappingDialogComponent
         ControllerMappingDialog { }
+    }
+
+    Splash {
+        anchors.fill: parent
+        z: 10000
+        visible: !Chiaki.session && !Chiaki.autoConnect
     }
 }

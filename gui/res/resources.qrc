@@ -24,6 +24,10 @@
     <file>steam_landscape.png</file>
     <file>steam_logo.png</file>
     <file>steam_portrait.png</file>
+    <file>e11-car-off.png</file>
+    <file>e11-car-on.png</file>
+    <file>e11-flare.png</file>
+    <file>e11-wordmark.png</file>
   </qresource>
   <qresource prefix="/shaders">
     <file alias="FSR.glsl">shaders/FSR.glsl</file>
