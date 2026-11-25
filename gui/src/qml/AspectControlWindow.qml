@@ -55,6 +55,7 @@ Window {
         property real customRays: 0.0
         property real customShadows: 0.6
         property bool advancedOpen: false
+        property int menuTab: 1
         property bool showStats: false
     }
 
@@ -62,11 +63,11 @@ Window {
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
     color: "transparent"
     modality: Qt.NonModal
-    width: Math.max(pill.implicitWidth, expanded ? 700 : 0)
-    height: pill.implicitHeight + (expanded ? card.implicitHeight + 8 : 0)
+    width: Math.max(pill.implicitWidth, (expanded && !confirmLeave) ? 760 : 0)
+    height: pill.implicitHeight + (confirmLeave ? leaveCard.implicitHeight + 8 : (expanded ? card.implicitHeight + 8 : 0))
 
     Material.theme: Material.Dark
-    Material.accent: "#2f8cff"
+    Material.accent: "#5aa9ff"
 
     Component.onCompleted: {
         collapsed = prefs.collapsed;
@@ -129,7 +130,26 @@ Window {
     property string statsLine: ""
     Timer {
         interval: 1000; repeat: true; running: quickWindow.visible && prefs.showStats && !quickWindow.collapsed
-        onTriggered: { quickWindow.fps = Chiaki.window.takeFrameCount(); quickWindow.statsLine = quickWindow.statsText(); }
+        onTriggered: { quickWindow.fps = Chiaki.window.takeFrameCount(); quickWindow.statsLine = quickWindow.statsText(); quickWindow.updateStatSlots(); }
+    }
+    // Fixed slots for the bar: each number has its own fixed-width cell, so the bar never changes size
+    property string sFps: "–"
+    property string sMbps: "–"
+    property string sLoss: "–"
+    property int sDropped: 0
+    property int sShown: 0
+    function updateStatSlots() {
+        let pm = Chiaki.window.proMotionActive();
+        let dropped = Math.max(0, Chiaki.window.droppedFrames - Chiaki.window.proMotionSurplus());
+        let shown = Math.max(0, Math.min(pm ? fps * 2 : fps, Chiaki.window.displayHz()) - dropped);
+        sShown = shown;
+        sFps = String(shown);
+        sDropped = dropped;
+        if (Chiaki.session) {
+            sMbps = Chiaki.session.measuredBitrate.toFixed(1);
+            let loss = isFinite(Chiaki.session.averagePacketLoss) ? Chiaki.session.averagePacketLoss * 100 : 0;
+            sLoss = loss.toFixed(1);
+        }
     }
     function statsText() {
         // Honest number: frames that actually reached the screen this second (arrived minus dropped).
@@ -540,18 +560,23 @@ Window {
         property string text
         property bool selected: false
         property string tip: ""
+        property color tint: "#5aa9ff"
+        property bool bold: false
         signal clicked()
-        implicitHeight: 28
-        implicitWidth: chipLabel.implicitWidth + 20
-        radius: 14
-        color: selected ? Material.accent : (chipHover.containsMouse ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.05))
+        implicitHeight: 32
+        implicitWidth: chipLabel.implicitWidth + 24
+        radius: 10
+        // Selected = coloured outline and text only, never a filled background
+        color: chipHover.containsMouse ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
+        border.width: 1.5
+        border.color: selected ? tint : "#1e2530"
         Label {
             id: chipLabel
             anchors.centerIn: parent
             text: chipRoot.text
-            font.pixelSize: 12
-            font.bold: chipRoot.selected
-            color: "white"
+            font.pixelSize: 13
+            font.bold: chipRoot.selected || chipRoot.bold
+            color: chipRoot.selected ? chipRoot.tint : "#b3bdc9"
         }
         MouseArea {
             id: chipHover
@@ -560,14 +585,17 @@ Window {
             cursorShape: Qt.PointingHandCursor
             onClicked: chipRoot.clicked()
         }
+        ToolTip.visible: chipRoot.tip !== "" && chipHover.containsMouse
+        ToolTip.delay: 600
+        ToolTip.text: chipRoot.tip
     }
 
     component SectionTitle: Label {
         font.pixelSize: 11
         font.bold: true
         font.capitalization: Font.AllUppercase
-        color: Qt.rgba(1, 1, 1, 0.55)
-        Layout.topMargin: 6
+        color: "#8c97a6"
+        Layout.topMargin: 8
     }
 
     component Toggle: RowLayout {
@@ -595,15 +623,16 @@ Window {
         Label { text: sliderRoot.valueText; color: Qt.rgba(1, 1, 1, 0.7); font.pixelSize: 12; Layout.preferredWidth: 52; horizontalAlignment: Text.AlignRight }
     }
 
-    // Top pill: grip, Fit / Stretch, menu, collapse
+    // Top bar: fixed size so it never moves when the numbers change
     Rectangle {
         id: pill
-        anchors.right: parent.right
-        implicitWidth: row.implicitWidth + 16
-        implicitHeight: 44
-        radius: 22
-        color: Qt.rgba(0.08, 0.08, 0.10, 0.85)
-        border.color: Qt.rgba(1, 1, 1, 0.14)
+        anchors.left: parent.left
+        width: implicitWidth
+        implicitWidth: row.implicitWidth + 20
+        implicitHeight: 50
+        radius: 14
+        color: "#eb0b0e13"
+        border.color: "#1e2530"
         border.width: 1
 
         RowLayout {
@@ -611,7 +640,7 @@ Window {
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: parent.left
             anchors.leftMargin: 8
-            spacing: 4
+            spacing: 6
 
             Item {
                 Layout.preferredWidth: 22
@@ -622,7 +651,7 @@ Window {
                     spacing: 3
                     Repeater {
                         model: 6
-                        Rectangle { width: 3; height: 3; radius: 1.5; color: Qt.rgba(1, 1, 1, 0.55) }
+                        Rectangle { width: 3; height: 3; radius: 1.5; color: "#8c97a6" }
                     }
                 }
                 MouseArea {
@@ -632,14 +661,35 @@ Window {
                 }
             }
 
-            Label {
+            Rectangle {
                 visible: prefs.showStats
-                text: quickWindow.statsLine
-                color: quickWindow.fps >= 55 || quickWindow.fps === 0 ? "#bfeccb" : "#ffd28a"
-                font.pixelSize: 12
-                font.family: "Menlo"
-                leftPadding: 4
-                rightPadding: 6
+                Layout.preferredHeight: 34
+                Layout.preferredWidth: statsRow.implicitWidth
+                radius: 9
+                color: "#07090c"
+                border.color: "#1e2530"
+                Row {
+                    id: statsRow
+                    anchors.verticalCenter: parent.verticalCenter
+                    component StatCell: Label {
+                        width: 92
+                        height: 34
+                        verticalAlignment: Text.AlignVCenter
+                        horizontalAlignment: Text.AlignRight
+                        rightPadding: 10
+                        font.pixelSize: 12
+                        font.family: "Menlo"
+                        color: "#eef2f7"
+                        elide: Text.ElideNone
+                    }
+                    StatCell { width: 80; text: quickWindow.sFps + " fps"; color: quickWindow.sShown >= 55 || quickWindow.fps === 0 ? "#5fd3a6" : "#f2c94c" }
+                    Rectangle { width: 1; height: 34; color: "#1e2530" }
+                    StatCell { width: 104; text: quickWindow.sMbps + " Mbps" }
+                    Rectangle { width: 1; height: 34; color: "#1e2530" }
+                    StatCell { width: 104; text: quickWindow.sLoss + "% loss" }
+                    Rectangle { width: 1; height: 34; color: "#1e2530" }
+                    StatCell { width: 112; text: quickWindow.sDropped + " dropped"; color: quickWindow.sDropped > 0 ? "#f2c94c" : "#8c97a6" }
+                }
             }
             Chip {
                 visible: !quickWindow.collapsed
@@ -656,30 +706,37 @@ Window {
                 onClicked: quickWindow.setMode(ChiakiWindow.VideoMode.Stretch)
             }
             Chip {
-                visible: !quickWindow.collapsed && Chiaki.controllers.length > 0
-                text: (Chiaki.controllers.length ? quickWindow.controllerLine(Chiaki.controllers[0]) : "")
-                tip: Chiaki.controllers.length > 1 ? qsTr("%1 controllers connected").arg(Chiaki.controllers.length)
-                                                   : qsTr("Controller connected")
-                onClicked: quickWindow.expanded = true
-            }
-            Chip {
-                // e11 Enhance: click to cycle Off -> Auto -> Max
+                // Graphics (MetalFX / Neural Engine): click to cycle Off -> Auto -> Max
                 visible: !quickWindow.collapsed && Qt.platform.os === "osx"
-                text: qsTr("Enhance: %1").arg(enh.modeNames[prefs.enhanceMode])
+                Layout.preferredWidth: 128
+                text: qsTr("Graphics: %1").arg(enh.modeNames[prefs.enhanceMode])
+                tint: "#ff7ab8"
+                selected: true
                 tip: qsTr("Sharper picture with MetalFX. Click to switch Off / Auto / Max")
-                selected: prefs.enhanceMode !== 0
                 onClicked: enh.setMode((prefs.enhanceMode + 1) % 3)
+            }
+            Label {
+                visible: !quickWindow.collapsed
+                Layout.preferredWidth: 150
+                elide: Text.ElideRight
+                font.pixelSize: 12
+                color: "#8c97a6"
+                text: Chiaki.controllers.length ? quickWindow.controllerLine(Chiaki.controllers[0]) : qsTr("No controller")
+                leftPadding: 4
             }
             Chip {
                 id: shotChip
-                // e11: screenshot. ✓ = saved (click again to open the folder), ⚠ = failed.
+                // screenshot: "Saved" (click again to open the folder) or "Failed"
                 property string flash: ""
                 property string message: ""
                 visible: !quickWindow.collapsed
-                text: flash === "✓" ? qsTr("Saved") : flash === "⚠" ? qsTr("Failed") : qsTr("Screenshot")
+                Layout.preferredWidth: 96
+                text: flash === "ok" ? qsTr("Saved") : flash === "err" ? qsTr("Failed") : qsTr("Screenshot")
+                selected: flash !== ""
+                tint: flash === "err" ? "#f2c94c" : "#5fd3a6"
                 tip: message !== "" ? message : qsTr("Screenshot (⌘P). Saved to Pictures › e11 Screenshots")
                 onClicked: {
-                    if (flash === "✓")
+                    if (flash === "ok")
                         Chiaki.window.openScreenshotFolder()
                     else
                         Chiaki.window.takeScreenshot()
@@ -692,12 +749,12 @@ Window {
                 Connections {
                     target: Chiaki.window
                     function onScreenshotSaved(path) {
-                        shotChip.flash = "✓"
+                        shotChip.flash = "ok"
                         shotChip.message = qsTr("Saved: %1").arg(path)
                         shotFlashTimer.restart()
                     }
                     function onScreenshotFailed(reason) {
-                        shotChip.flash = "⚠"
+                        shotChip.flash = "err"
                         shotChip.message = reason
                         shotFlashTimer.restart()
                     }
@@ -705,62 +762,148 @@ Window {
             }
             Chip {
                 visible: !quickWindow.collapsed
-                text: qsTr("Settings")
-                tip: qsTr("Quick menu: bitrate, performance, colour")
-                selected: quickWindow.expanded
-                onClicked: quickWindow.expanded = !quickWindow.expanded
+                text: qsTr("Main menu")
+                tint: "#f2c94c"
+                selected: true
+                tip: qsTr("Stop streaming and go back to the main menu")
+                onClicked: { quickWindow.expanded = false; quickWindow.confirmLeave = !quickWindow.confirmLeave; }
             }
             Chip {
+                visible: !quickWindow.collapsed
+                text: qsTr("Settings")
+                tip: qsTr("Picture, graphics, sound, stream")
+                selected: quickWindow.expanded
+                onClicked: { quickWindow.confirmLeave = false; quickWindow.expanded = !quickWindow.expanded; }
+            }
+            Chip {
+                Layout.preferredWidth: 64
                 text: quickWindow.collapsed ? qsTr("Show") : qsTr("Hide")
-                tip: quickWindow.collapsed ? qsTr("Show") : qsTr("Shrink")
-                onClicked: quickWindow.collapsed = !quickWindow.collapsed
+                tip: quickWindow.collapsed ? qsTr("Show the bar") : qsTr("Shrink the bar")
+                onClicked: { quickWindow.confirmLeave = false; quickWindow.collapsed = !quickWindow.collapsed; }
             }
         }
     }
 
-    // Expanded quick menu
+    // Expanded quick menu: tabs on the left, one page at a time (DeskCleaner colours)
+    readonly property var tabDefs: [
+        { name: qsTr("Picture"), color: "#5aa9ff" },
+        { name: qsTr("Graphics"), color: "#ff7ab8" },
+        { name: qsTr("Sound"), color: "#f2c94c" },
+        { name: qsTr("Stream"), color: "#b79bff" },
+        { name: qsTr("Controller"), color: "#5fd3a6" },
+        { name: qsTr("Display"), color: "#8c97a6" }
+    ]
+    property bool confirmLeave: false
     Rectangle {
-        id: card
-        visible: quickWindow.expanded
+        id: leaveCard
+        visible: quickWindow.confirmLeave
         anchors.top: pill.bottom
         anchors.topMargin: 8
-        anchors.right: parent.right
-        width: 700
-        implicitHeight: content.implicitHeight + 24
-        radius: 16
-        color: Qt.rgba(0.08, 0.08, 0.10, 0.92)
-        border.color: Qt.rgba(1, 1, 1, 0.14)
-        border.width: 1
-
+        anchors.left: parent.left
+        width: pill.width
+        implicitHeight: leaveCol.implicitHeight + 40
+        height: implicitHeight
+        radius: 18
+        color: "#f50b0e13"
+        border.color: "#1e2530"
         ColumnLayout {
-            id: content
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.margins: 12
-            spacing: 6
-
-            // ----- Live stats -----
+            id: leaveCol
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 20 }
+            spacing: 10
+            Label { text: qsTr("Back to main menu?"); color: "#eef2f7"; font.pixelSize: 20; font.weight: Font.Black }
             Label {
                 Layout.fillWidth: true
-                color: Qt.rgba(1, 1, 1, 0.75)
-                font.pixelSize: 12
-                text: qsTr("Live: %1 Mbps · %2 dropped/s · %3")
-                      .arg(Chiaki.session ? Chiaki.session.measuredBitrate.toFixed(1) : "–")
-                      .arg(Chiaki.window.droppedFrames)
-                      .arg(quickWindow.chip)
+                wrapMode: Text.WordWrap
+                color: "#8c97a6"
+                font.pixelSize: 13
+                text: qsTr("The stream stops. Your game keeps running on the PS5, so you can jump straight back in.")
             }
-
             RowLayout {
+                Layout.alignment: Qt.AlignRight
+                spacing: 8
+                Chip { text: qsTr("Keep playing"); implicitHeight: 36; onClicked: quickWindow.confirmLeave = false }
+                Chip { text: qsTr("Main menu"); tint: "#f2c94c"; selected: true; implicitHeight: 36
+                        onClicked: { quickWindow.confirmLeave = false; Chiaki.stopSession(false); } }
+            }
+        }
+    }
+
+    Rectangle {
+        id: card
+        visible: quickWindow.expanded && !quickWindow.confirmLeave
+        anchors.top: pill.bottom
+        anchors.topMargin: 8
+        anchors.left: parent.left
+        width: Math.max(pill.width, 760)
+        implicitHeight: 470
+        height: implicitHeight
+        radius: 18
+        color: "#f50b0e13"
+        border.color: "#1e2530"
+        border.width: 1
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 1
+            spacing: 0
+            ColumnLayout {
+                Layout.preferredWidth: 170
+                Layout.maximumWidth: 170
+                Layout.fillWidth: false
+                Layout.fillHeight: true
+                Layout.margins: 12
+                spacing: 4
+                Label {
+                    text: qsTr("LIVE · %1 Mbps · %2").arg(Chiaki.session ? Chiaki.session.measuredBitrate.toFixed(1) : "–").arg(quickWindow.chip.toUpperCase())
+                    color: "#8c97a6"
+                    font.pixelSize: 10
+                    font.family: "Menlo"
+                    Layout.leftMargin: 8
+                    Layout.bottomMargin: 8
+                    Layout.maximumWidth: 160
+                    elide: Text.ElideRight
+                }
+                Repeater {
+                    model: quickWindow.tabDefs
+                    delegate: Rectangle {
+                        required property var modelData
+                        required property int index
+                        readonly property bool on: prefs.menuTab === index
+                        Layout.fillWidth: true
+                        implicitHeight: 38
+                        radius: 10
+                        color: "transparent"
+                        border.width: 1.5
+                        border.color: on ? modelData.color : (tabHover.containsMouse ? "#1e2530" : "transparent")
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 12
+                            spacing: 10
+                            Rectangle { width: 11; height: 11; radius: 5.5; color: "transparent"; border.width: 2; border.color: modelData.color }
+                            Label { text: modelData.name; color: on ? "#eef2f7" : "#b3bdc9"; font.pixelSize: 14; font.weight: on ? Font.DemiBold : Font.Normal; Layout.fillWidth: true }
+                        }
+                        MouseArea { id: tabHover; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: prefs.menuTab = index }
+                    }
+                }
+                Item { Layout.fillHeight: true }
+            }
+            Rectangle { Layout.fillHeight: true; width: 1; color: "#1e2530" }
+            StackLayout {
                 Layout.fillWidth: true
-                spacing: 18
+                Layout.fillHeight: true
+                Layout.margins: 18
+                currentIndex: prefs.menuTab
+            Flickable {
+                clip: true
+                contentWidth: width
+                contentHeight: pg0.implicitHeight + 8
+                boundsBehavior: Flickable.StopAtBounds
+                ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
                 ColumnLayout {
-                    Layout.preferredWidth: 330
-                    Layout.maximumWidth: 330
-                    Layout.alignment: Qt.AlignTop
-                    spacing: 6
-                    // ----- Looks -----
-                    SectionTitle { text: qsTr("Look") }
+                    id: pg0
+                    width: parent.width - 12
+                    spacing: 8
+                    Label { text: qsTr("Picture"); color: "#5aa9ff"; font.pixelSize: 20; font.weight: Font.Black; Layout.bottomMargin: 4 }
 
                     Label {
                         text: qsTr("Game  ✓  (tuned for Mac screens)")
@@ -935,8 +1078,314 @@ Window {
                         }
                     }
 
-                    // ----- Controller -----
-                    SectionTitle { text: qsTr("Controller") }
+                }
+            }
+            Flickable {
+                clip: true
+                contentWidth: width
+                contentHeight: pg1.implicitHeight + 8
+                boundsBehavior: Flickable.StopAtBounds
+                ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                ColumnLayout {
+                    id: pg1
+                    width: parent.width - 12
+                    spacing: 8
+                    Label { text: qsTr("Graphics"); color: "#ff7ab8"; font.pixelSize: 20; font.weight: Font.Black; Layout.bottomMargin: 4 }
+                    Flow {
+                        visible: Qt.platform.os === "osx"
+                        Layout.fillWidth: true
+                        spacing: 4
+                        Repeater {
+                            model: enh.modeNames
+                            delegate: Chip {
+                                required property int index
+                                required property string modelData
+                                text: modelData
+                                selected: prefs.enhanceMode === index
+                                onClicked: enh.setMode(index)
+                            }
+                        }
+                    }
+                    Label {
+                        visible: Qt.platform.os === "osx"
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        font.pixelSize: 11
+                        color: Qt.rgba(1, 1, 1, 0.6)
+                        text: prefs.enhanceMode === 0 ? qsTr("Off: the stream as the PS5 sends it.")
+                            : (enh.status !== "" ? enh.status
+                               : (prefs.enhanceMode === 1 ? qsTr("Auto: picks the best picture this Mac can hold, live.")
+                                                          : qsTr("Max: always the strongest this Mac allows.")))
+                    }
+                    Label {
+                        text: prefs.showAdvancedVideo ? qsTr("▾ Advanced picture options") : qsTr("▸ Advanced picture options")
+                        visible: Qt.platform.os === "osx"
+                        font.pixelSize: 11
+                        color: Material.accent
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: prefs.showAdvancedVideo = !prefs.showAdvancedVideo
+                        }
+                    }
+                    ColumnLayout {
+                        // advanced: the separate switches the Enhance button drives
+                        visible: prefs.showAdvancedVideo || Qt.platform.os !== "osx"
+                        Layout.fillWidth: true
+                        spacing: 6
+                    Toggle {
+                        text: qsTr("Neural Engine upscaling (Apple ML)")
+                        enabled: Chiaki.window.neuralUpscaleAvailable()
+                        checked: Chiaki.settings.neuralUpscale && enabled
+                        onToggled: { prefs.enhanceMode = 0; enh.stop(); Chiaki.settings.neuralUpscale = checked }
+                    }
+                    Label {
+                        id: neuralStatus
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        font.pixelSize: 11
+                        color: Qt.rgba(1, 1, 1, 0.55)
+                        text: Chiaki.window.neuralUpscaleStatus()
+                        Timer {
+                            interval: 1000; repeat: true
+                            running: quickWindow.expanded && quickWindow.visible
+                            onTriggered: neuralStatus.text = Chiaki.window.neuralUpscaleStatus()
+                        }
+                    }
+                    // e11 MetalFX upscaling (GPU spatial scaler); either this or the Neural Engine
+                    Toggle {
+                        text: qsTr("MetalFX upscaling (GPU, lighter than Neural Engine)")
+                        enabled: Chiaki.window.metalFXAvailable()
+                        checked: Chiaki.settings.metalFXUpscale && enabled
+                        onToggled: { prefs.enhanceMode = 0; enh.stop(); Chiaki.settings.metalFXUpscale = checked }
+                    }
+                    Label {
+                        id: metalFXStatus
+                        visible: Chiaki.settings.metalFXUpscale
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        font.pixelSize: 11
+                        color: Qt.rgba(1, 1, 1, 0.55)
+                        text: Chiaki.window.metalFXStatus()
+                        Timer {
+                            interval: 1000; repeat: true
+                            running: quickWindow.expanded && quickWindow.visible && Chiaki.settings.metalFXUpscale
+                            onTriggered: metalFXStatus.text = Chiaki.window.metalFXStatus()
+                        }
+                    }
+                    // e11 Pro Motion: 60 -> 120 fps frame generation (Apple ML, macOS 26+)
+                    Toggle {
+                        text: qsTr("e11 Pro Motion (120 fps frame generation)")
+                        enabled: Chiaki.window.proMotionAvailable()
+                        checked: Chiaki.settings.proMotion && enabled
+                        onToggled: Chiaki.settings.proMotion = checked
+                    }
+                    Label {
+                        id: proMotionStatus
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        font.pixelSize: 11
+                        color: Qt.rgba(1, 1, 1, 0.55)
+                        text: Chiaki.window.proMotionStatus()
+                        Timer {
+                            interval: 1000; repeat: true
+                            running: quickWindow.expanded && quickWindow.visible
+                            onTriggered: proMotionStatus.text = Chiaki.window.proMotionStatus()
+                        }
+                    }
+                    // e11: Clean picture (Apple ML temporal noise filter, macOS 26+)
+                    Toggle {
+                        text: qsTr("Clean picture (removes blockiness and noise)")
+                        enabled: Chiaki.window.cleanPictureAvailable()
+                        checked: Chiaki.settings.cleanPicture && enabled
+                        onToggled: { prefs.enhanceMode = 0; enh.stop(); Chiaki.settings.cleanPicture = checked }
+                    }
+                    Flow {
+                        visible: Chiaki.settings.cleanPicture && Chiaki.window.cleanPictureAvailable()
+                        Layout.fillWidth: true
+                        spacing: 4
+                        Repeater {
+                            model: [
+                                { name: qsTr("Light"), value: 0.25 },
+                                { name: qsTr("Medium"), value: 0.5 },
+                                { name: qsTr("Strong"), value: 0.85 }
+                            ]
+                            delegate: Chip {
+                                required property var modelData
+                                text: modelData.name
+                                selected: Math.abs(Chiaki.settings.cleanPictureStrength - modelData.value) < 0.05
+                                onClicked: Chiaki.settings.cleanPictureStrength = modelData.value
+                            }
+                        }
+                    }
+                    Label {
+                        id: cleanStatus
+                        visible: Chiaki.settings.cleanPicture
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        font.pixelSize: 11
+                        color: Qt.rgba(1, 1, 1, 0.55)
+                        text: Chiaki.window.cleanPictureStatus()
+                        Timer {
+                            interval: 1000; repeat: true
+                            running: quickWindow.expanded && quickWindow.visible && Chiaki.settings.cleanPicture
+                            onTriggered: cleanStatus.text = Chiaki.window.cleanPictureStatus()
+                        }
+                    }
+                    }
+                }
+            }
+            Flickable {
+                clip: true
+                contentWidth: width
+                contentHeight: pg2.implicitHeight + 8
+                boundsBehavior: Flickable.StopAtBounds
+                ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                ColumnLayout {
+                    id: pg2
+                    width: parent.width - 12
+                    spacing: 8
+                    Label { text: qsTr("Sound"); color: "#f2c94c"; font.pixelSize: 20; font.weight: Font.Black; Layout.bottomMargin: 4 }
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 4
+                        Chip {
+                            text: Qt.platform.os === "osx" ? qsTr("Mac + TV") : qsTr("PC + TV")
+                            selected: prefs.soundOnComputer
+                            onClicked: { prefs.soundOnComputer = true; Chiaki.window.setComputerSoundMuted(false) }
+                        }
+                        Chip {
+                            text: qsTr("TV only")
+                            selected: !prefs.soundOnComputer
+                            onClicked: { prefs.soundOnComputer = false; Chiaki.window.setComputerSoundMuted(true) }
+                        }
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        font.pixelSize: 11
+                        color: Qt.rgba(1, 1, 1, 0.55)
+                        text: (Qt.platform.os === "osx"
+                               ? qsTr("Sound only on the Mac? Mute your TV: the PS5 always sends sound to it.")
+                               : qsTr("Sound only on the PC? Mute your TV: the PS5 always sends sound to it."))
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        visible: prefs.soundOnComputer
+                        Label {
+                            text: Qt.platform.os === "osx" ? qsTr("Mac speaker") : qsTr("Speaker")
+                            color: "white"
+                            font.pixelSize: 13
+                        }
+                        ComboBox {
+                            id: speakerBox
+                            Layout.fillWidth: true
+                            font.pixelSize: 12
+                            model: [qsTr("System default (follows the sound menu)")].concat(Chiaki.settings.availableAudioOutDevices)
+                            currentIndex: Math.max(0, model.indexOf(Chiaki.settings.audioOutDevice))
+                            onActivated: (index) => Chiaki.settings.audioOutDevice = index ? model[index] : ""
+                        }
+                    }
+                    Label {
+                        visible: prefs.soundOnComputer
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        font.pixelSize: 11
+                        color: Qt.rgba(1, 1, 1, 0.55)
+                        text: Chiaki.settings.audioOutDevice === ""
+                            ? qsTr("Switch speakers or AirPods any time from the sound menu in the menu bar.")
+                            : qsTr("A chosen speaker is used from the next time you connect.")
+                    }
+                }
+            }
+            Flickable {
+                clip: true
+                contentWidth: width
+                contentHeight: pg3.implicitHeight + 8
+                boundsBehavior: Flickable.StopAtBounds
+                ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                ColumnLayout {
+                    id: pg3
+                    width: parent.width - 12
+                    spacing: 8
+                    Label { text: qsTr("Stream"); color: "#b79bff"; font.pixelSize: 20; font.weight: Font.Black; Layout.bottomMargin: 4 }
+                                            SectionTitle { text: qsTr("Stream bitrate") }
+                                            Toggle {
+                                                text: qsTr("Auto (PS5 adapts to your network)")
+                                                checked: prefs.autoBitrate
+                                                onToggled: { prefs.autoBitrate = checked; quickWindow.applyBitratePolicy(); }
+                                            }
+                                            SliderRow {
+                                                visible: !prefs.autoBitrate
+                                                text: qsTr("Manual")
+                                                from: 5; to: 100; stepSize: 1
+                                                value: prefs.manualBitrateMbps
+                                                valueText: value + " Mbps"
+                                                onMoved: { prefs.manualBitrateMbps = value; quickWindow.applyBitratePolicy(); }
+                                            }
+                                            Label {
+                                                Layout.fillWidth: true
+                                                wrapMode: Text.WordWrap
+                                                font.pixelSize: 11
+                                                color: Qt.rgba(1, 1, 1, 0.5)
+                                                text: qsTr("Bitrate is set when the stream starts; changes apply next time you connect.")
+                                            }
+
+                    SectionTitle { text: qsTr("Performance") }
+                                            Toggle {
+                                                text: qsTr("Auto (best quality this Mac can hold)")
+                                                checked: prefs.autoPerformance2
+                                                onToggled: {
+                                                    prefs.autoPerformance2 = checked;
+                                                    if (checked)
+                                                        perf.start();
+                                                }
+                                            }
+                                            Flow {
+                                                Layout.fillWidth: true
+                                                spacing: 4
+                                                Repeater {
+                                                    model: quickWindow.qualityNames
+                                                    delegate: Chip {
+                                                        required property int index
+                                                        required property string modelData
+                                                        text: modelData
+                                                        selected: quickWindow.currentLevel() === index
+                                                        tip: [qsTr("Lowest GPU use"), qsTr("Good quality, light"), qsTr("High quality scaling"),
+                                                              qsTr("High quality + FSR sharpening for Retina"),
+                                                              qsTr("High quality + neural upscaling (FSRCNNX on the GPU)")][index]
+                                                        onClicked: {
+                                                            prefs.autoPerformance2 = false;
+                                                            quickWindow.setLevel(index);
+                                                            Chiaki.settings.videoPreset = index;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            Label {
+                                                visible: prefs.autoPerformance2 && perf.status !== ""
+                                                text: perf.status
+                                                font.pixelSize: 11
+                                                color: Qt.rgba(1, 1, 1, 0.6)
+                                            }
+                                            Toggle {
+                                                text: qsTr("V-Sync (no tearing, slightly more latency)")
+                                                checked: Chiaki.settings.vSyncEnabled
+                                                onToggled: Chiaki.settings.vSyncEnabled = checked
+                                            }
+                }
+            }
+            Flickable {
+                clip: true
+                contentWidth: width
+                contentHeight: pg4.implicitHeight + 8
+                boundsBehavior: Flickable.StopAtBounds
+                ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                ColumnLayout {
+                    id: pg4
+                    width: parent.width - 12
+                    spacing: 8
+                    Label { text: qsTr("Controller"); color: "#5fd3a6"; font.pixelSize: 20; font.weight: Font.Black; Layout.bottomMargin: 4 }
                     Label {
                         visible: Chiaki.controllers.length === 0
                         text: qsTr("No controller connected · keyboard and mouse work too")
@@ -972,13 +1421,18 @@ Window {
                         }
                     }
                 }
-                Rectangle { Layout.fillHeight: true; width: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+            }
+            Flickable {
+                clip: true
+                contentWidth: width
+                contentHeight: pg5.implicitHeight + 8
+                boundsBehavior: Flickable.StopAtBounds
+                ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
                 ColumnLayout {
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignTop
-                    spacing: 6
-                    // ----- Display -----
-                    SectionTitle { text: qsTr("Display") }
+                    id: pg5
+                    width: parent.width - 12
+                    spacing: 8
+                    Label { text: qsTr("Display"); color: "#eef2f7"; font.pixelSize: 20; font.weight: Font.Black; Layout.bottomMargin: 4 }
                     Toggle {
                         text: qsTr("Stats on panel (FPS, bitrate, loss)")
                         checked: prefs.showStats
@@ -990,298 +1444,8 @@ Window {
                         onToggled: Chiaki.settings.showStreamStats = checked
                     }
 
-                    // AI Play recording UI removed for launch (C++ recorder kept, always off).
-
-                    // ----- Advanced (everything here is automatic by default) -----
-                    Rectangle {
-                        Layout.fillWidth: true
-                        Layout.topMargin: 6
-                        implicitHeight: 30
-                        radius: 8
-                        color: advHover.containsMouse ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(1, 1, 1, 0.04)
-                        Label {
-                            anchors.left: parent.left
-                            anchors.leftMargin: 10
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: (prefs.advancedOpen ? "▾ " : "▸ ") + qsTr("Advanced")
-                                  + (prefs.advancedOpen ? "" : qsTr("  ·  all automatic"))
-                            color: Qt.rgba(1, 1, 1, 0.8)
-                            font.pixelSize: 12
-                        }
-                        MouseArea {
-                            id: advHover
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: prefs.advancedOpen = !prefs.advancedOpen
-                        }
-                    }
-                    ColumnLayout {
-                        visible: prefs.advancedOpen
-                        Layout.fillWidth: true
-                        spacing: 6
-                        // ----- Stream -----
-                        SectionTitle { text: qsTr("Stream bitrate") }
-                        Toggle {
-                            text: qsTr("Auto (PS5 adapts to your network)")
-                            checked: prefs.autoBitrate
-                            onToggled: { prefs.autoBitrate = checked; quickWindow.applyBitratePolicy(); }
-                        }
-                        SliderRow {
-                            visible: !prefs.autoBitrate
-                            text: qsTr("Manual")
-                            from: 5; to: 100; stepSize: 1
-                            value: prefs.manualBitrateMbps
-                            valueText: value + " Mbps"
-                            onMoved: { prefs.manualBitrateMbps = value; quickWindow.applyBitratePolicy(); }
-                        }
-                        Label {
-                            Layout.fillWidth: true
-                            wrapMode: Text.WordWrap
-                            font.pixelSize: 11
-                            color: Qt.rgba(1, 1, 1, 0.5)
-                            text: qsTr("Bitrate is set when the stream starts; changes apply next time you connect.")
-                        }
-
-                        // ----- Performance -----
-                        SectionTitle { text: qsTr("🔊 Sound") }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: 4
-                            Chip {
-                                text: Qt.platform.os === "osx" ? qsTr("Mac + TV") : qsTr("PC + TV")
-                                selected: prefs.soundOnComputer
-                                onClicked: { prefs.soundOnComputer = true; Chiaki.window.setComputerSoundMuted(false) }
-                            }
-                            Chip {
-                                text: qsTr("TV only")
-                                selected: !prefs.soundOnComputer
-                                onClicked: { prefs.soundOnComputer = false; Chiaki.window.setComputerSoundMuted(true) }
-                            }
-                        }
-                        Label {
-                            Layout.fillWidth: true
-                            wrapMode: Text.WordWrap
-                            font.pixelSize: 11
-                            color: Qt.rgba(1, 1, 1, 0.55)
-                            text: (Qt.platform.os === "osx"
-                                   ? qsTr("Sound only on the Mac? Mute your TV: the PS5 always sends sound to it.")
-                                   : qsTr("Sound only on the PC? Mute your TV: the PS5 always sends sound to it."))
-                        }
-                        RowLayout {
-                            Layout.fillWidth: true
-                            visible: prefs.soundOnComputer
-                            Label {
-                                text: Qt.platform.os === "osx" ? qsTr("Mac speaker") : qsTr("Speaker")
-                                color: "white"
-                                font.pixelSize: 13
-                            }
-                            ComboBox {
-                                id: speakerBox
-                                Layout.fillWidth: true
-                                font.pixelSize: 12
-                                model: [qsTr("System default (follows the sound menu)")].concat(Chiaki.settings.availableAudioOutDevices)
-                                currentIndex: Math.max(0, model.indexOf(Chiaki.settings.audioOutDevice))
-                                onActivated: (index) => Chiaki.settings.audioOutDevice = index ? model[index] : ""
-                            }
-                        }
-                        Label {
-                            visible: prefs.soundOnComputer
-                            Layout.fillWidth: true
-                            wrapMode: Text.WordWrap
-                            font.pixelSize: 11
-                            color: Qt.rgba(1, 1, 1, 0.55)
-                            text: Chiaki.settings.audioOutDevice === ""
-                                ? qsTr("Switch speakers or AirPods any time from the sound menu in the menu bar.")
-                                : qsTr("A chosen speaker is used from the next time you connect.")
-                        }
-                        SectionTitle { text: qsTr("Enhance (sharper, cleaner picture)"); visible: Qt.platform.os === "osx" }
-                        Flow {
-                            visible: Qt.platform.os === "osx"
-                            Layout.fillWidth: true
-                            spacing: 4
-                            Repeater {
-                                model: enh.modeNames
-                                delegate: Chip {
-                                    required property int index
-                                    required property string modelData
-                                    text: modelData
-                                    selected: prefs.enhanceMode === index
-                                    onClicked: enh.setMode(index)
-                                }
-                            }
-                        }
-                        Label {
-                            visible: Qt.platform.os === "osx"
-                            Layout.fillWidth: true
-                            wrapMode: Text.WordWrap
-                            font.pixelSize: 11
-                            color: Qt.rgba(1, 1, 1, 0.6)
-                            text: prefs.enhanceMode === 0 ? qsTr("Off: the stream as the PS5 sends it.")
-                                : (enh.status !== "" ? enh.status
-                                   : (prefs.enhanceMode === 1 ? qsTr("Auto: picks the best picture this Mac can hold, live.")
-                                                              : qsTr("Max: always the strongest this Mac allows.")))
-                        }
-                        Label {
-                            text: prefs.showAdvancedVideo ? qsTr("▾ Advanced picture options") : qsTr("▸ Advanced picture options")
-                            visible: Qt.platform.os === "osx"
-                            font.pixelSize: 11
-                            color: Material.accent
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: prefs.showAdvancedVideo = !prefs.showAdvancedVideo
-                            }
-                        }
-                        SectionTitle { text: qsTr("Performance") }
-                        Toggle {
-                            text: qsTr("Auto (best quality this Mac can hold)")
-                            checked: prefs.autoPerformance2
-                            onToggled: {
-                                prefs.autoPerformance2 = checked;
-                                if (checked)
-                                    perf.start();
-                            }
-                        }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: 4
-                            Repeater {
-                                model: quickWindow.qualityNames
-                                delegate: Chip {
-                                    required property int index
-                                    required property string modelData
-                                    text: modelData
-                                    selected: quickWindow.currentLevel() === index
-                                    tip: [qsTr("Lowest GPU use"), qsTr("Good quality, light"), qsTr("High quality scaling"),
-                                          qsTr("High quality + FSR sharpening for Retina"),
-                                          qsTr("High quality + neural upscaling (FSRCNNX on the GPU)")][index]
-                                    onClicked: {
-                                        prefs.autoPerformance2 = false;
-                                        quickWindow.setLevel(index);
-                                        Chiaki.settings.videoPreset = index;
-                                    }
-                                }
-                            }
-                        }
-                        Label {
-                            visible: prefs.autoPerformance2 && perf.status !== ""
-                            text: perf.status
-                            font.pixelSize: 11
-                            color: Qt.rgba(1, 1, 1, 0.6)
-                        }
-                        ColumnLayout {
-                            // advanced: the separate switches the Enhance button drives
-                            visible: prefs.showAdvancedVideo || Qt.platform.os !== "osx"
-                            Layout.fillWidth: true
-                            spacing: 6
-                        Toggle {
-                            text: qsTr("Neural Engine upscaling (Apple ML)")
-                            enabled: Chiaki.window.neuralUpscaleAvailable()
-                            checked: Chiaki.settings.neuralUpscale && enabled
-                            onToggled: { prefs.enhanceMode = 0; enh.stop(); Chiaki.settings.neuralUpscale = checked }
-                        }
-                        Label {
-                            id: neuralStatus
-                            Layout.fillWidth: true
-                            wrapMode: Text.WordWrap
-                            font.pixelSize: 11
-                            color: Qt.rgba(1, 1, 1, 0.55)
-                            text: Chiaki.window.neuralUpscaleStatus()
-                            Timer {
-                                interval: 1000; repeat: true
-                                running: quickWindow.expanded && quickWindow.visible
-                                onTriggered: neuralStatus.text = Chiaki.window.neuralUpscaleStatus()
-                            }
-                        }
-                        // e11 MetalFX upscaling (GPU spatial scaler); either this or the Neural Engine
-                        Toggle {
-                            text: qsTr("MetalFX upscaling (GPU, lighter than Neural Engine)")
-                            enabled: Chiaki.window.metalFXAvailable()
-                            checked: Chiaki.settings.metalFXUpscale && enabled
-                            onToggled: { prefs.enhanceMode = 0; enh.stop(); Chiaki.settings.metalFXUpscale = checked }
-                        }
-                        Label {
-                            id: metalFXStatus
-                            visible: Chiaki.settings.metalFXUpscale
-                            Layout.fillWidth: true
-                            wrapMode: Text.WordWrap
-                            font.pixelSize: 11
-                            color: Qt.rgba(1, 1, 1, 0.55)
-                            text: Chiaki.window.metalFXStatus()
-                            Timer {
-                                interval: 1000; repeat: true
-                                running: quickWindow.expanded && quickWindow.visible && Chiaki.settings.metalFXUpscale
-                                onTriggered: metalFXStatus.text = Chiaki.window.metalFXStatus()
-                            }
-                        }
-                        // e11 Pro Motion: 60 -> 120 fps frame generation (Apple ML, macOS 26+)
-                        Toggle {
-                            text: qsTr("e11 Pro Motion (120 fps frame generation)")
-                            enabled: Chiaki.window.proMotionAvailable()
-                            checked: Chiaki.settings.proMotion && enabled
-                            onToggled: Chiaki.settings.proMotion = checked
-                        }
-                        Label {
-                            id: proMotionStatus
-                            Layout.fillWidth: true
-                            wrapMode: Text.WordWrap
-                            font.pixelSize: 11
-                            color: Qt.rgba(1, 1, 1, 0.55)
-                            text: Chiaki.window.proMotionStatus()
-                            Timer {
-                                interval: 1000; repeat: true
-                                running: quickWindow.expanded && quickWindow.visible
-                                onTriggered: proMotionStatus.text = Chiaki.window.proMotionStatus()
-                            }
-                        }
-                        // e11: Clean picture (Apple ML temporal noise filter, macOS 26+)
-                        Toggle {
-                            text: qsTr("Clean picture (removes blockiness and noise)")
-                            enabled: Chiaki.window.cleanPictureAvailable()
-                            checked: Chiaki.settings.cleanPicture && enabled
-                            onToggled: { prefs.enhanceMode = 0; enh.stop(); Chiaki.settings.cleanPicture = checked }
-                        }
-                        Flow {
-                            visible: Chiaki.settings.cleanPicture && Chiaki.window.cleanPictureAvailable()
-                            Layout.fillWidth: true
-                            spacing: 4
-                            Repeater {
-                                model: [
-                                    { name: qsTr("Light"), value: 0.25 },
-                                    { name: qsTr("Medium"), value: 0.5 },
-                                    { name: qsTr("Strong"), value: 0.85 }
-                                ]
-                                delegate: Chip {
-                                    required property var modelData
-                                    text: modelData.name
-                                    selected: Math.abs(Chiaki.settings.cleanPictureStrength - modelData.value) < 0.05
-                                    onClicked: Chiaki.settings.cleanPictureStrength = modelData.value
-                                }
-                            }
-                        }
-                        Label {
-                            id: cleanStatus
-                            visible: Chiaki.settings.cleanPicture
-                            Layout.fillWidth: true
-                            wrapMode: Text.WordWrap
-                            font.pixelSize: 11
-                            color: Qt.rgba(1, 1, 1, 0.55)
-                            text: Chiaki.window.cleanPictureStatus()
-                            Timer {
-                                interval: 1000; repeat: true
-                                running: quickWindow.expanded && quickWindow.visible && Chiaki.settings.cleanPicture
-                                onTriggered: cleanStatus.text = Chiaki.window.cleanPictureStatus()
-                            }
-                        }
-                        }
-                        Toggle {
-                            text: qsTr("V-Sync (no tearing, slightly more latency)")
-                            checked: Chiaki.settings.vSyncEnabled
-                            onToggled: Chiaki.settings.vSyncEnabled = checked
-                        }
-                    }
                 }
+            }
             }
         }
     }
