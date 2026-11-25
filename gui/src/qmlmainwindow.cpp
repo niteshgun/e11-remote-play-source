@@ -2857,6 +2857,60 @@ bool QmlMainWindow::metalFXAvailable() const
 #endif
 }
 
+void QmlMainWindow::updateEnhanceTarget()
+{
+#ifdef Q_OS_MACOS
+    // the picture is shown at most at the window's size in real pixels
+    const qreal dpr = devicePixelRatio();
+    MacMetalFXUpscale::SetTargetSize(qRound(width() * dpr), qRound(height() * dpr));
+#endif
+}
+
+bool QmlMainWindow::metalFXActive() const
+{
+#ifdef Q_OS_MACOS
+    return MacMetalFXUpscale::Active();
+#else
+    return false;
+#endif
+}
+
+double QmlMainWindow::metalFXP95Ms() const
+{
+#ifdef Q_OS_MACOS
+    return MacMetalFXUpscale::P95Ms();
+#else
+    return 0.0;
+#endif
+}
+
+bool QmlMainWindow::onBatteryPower() const
+{
+#ifdef Q_OS_MACOS
+    return MacSystemState::OnBattery();
+#else
+    return false;
+#endif
+}
+
+bool QmlMainWindow::lowPowerMode() const
+{
+#ifdef Q_OS_MACOS
+    return MacSystemState::LowPowerMode();
+#else
+    return false;
+#endif
+}
+
+int QmlMainWindow::thermalLevel() const
+{
+#ifdef Q_OS_MACOS
+    return MacSystemState::ThermalLevel();
+#else
+    return 0;
+#endif
+}
+
 QString QmlMainWindow::metalFXStatus() const
 {
 #ifdef Q_OS_MACOS

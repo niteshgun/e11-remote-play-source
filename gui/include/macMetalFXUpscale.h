@@ -21,10 +21,23 @@ namespace MacMetalFXUpscale {
 	int OutputWidth();
 	int OutputHeight();
 	// Takes an AV_PIX_FMT_VIDEOTOOLBOX frame (decoder frame, or a GPU frame from Clean picture /
-	// Pro Motion) and returns a new 2x software NV12 frame, or nullptr to fall back. Frame thread.
+	// Pro Motion) and returns a new software NV12 frame upscaled to fit the target size (max 2x), or nullptr to fall back. Frame thread.
 	AVFrame *Process(const AVFrame *vt_frame);
 	// Drop the scaler (stream ended, resolution changed).
 	void Reset();
+	// e11 Enhance: the size (in pixels) the picture is shown at. MetalFX upscales to fit this
+	// (keeping the aspect ratio, at most 2x) instead of always 2x, so a 1080p stream on a
+	// 2560x1664 MacBook Air becomes 2560x1440, not 3840x2160 (2.25x fewer pixels to process).
+	void SetTargetSize(int width, int height);
+	// 95th percentile processing time over the last ~2 s (0 if inactive).
+	double P95Ms();
+}
+
+// e11 Enhance: system state used by the Auto policy.
+namespace MacSystemState {
+	bool OnBattery();      // running on battery power
+	bool LowPowerMode();   // macOS Low Power Mode is on
+	int ThermalLevel();    // 0 nominal, 1 fair, 2 serious, 3 critical
 }
 
 #endif

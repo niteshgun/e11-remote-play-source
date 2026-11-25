@@ -31,6 +31,9 @@ Window {
         property int manualBitrateMbps: 30
         // Performance
         property bool autoPerformance2: true
+        // e11 Enhance: 0 Off, 1 Auto (default), 2 Max
+        property int enhanceMode: 1
+        property bool showAdvancedVideo: false
         // Look: -1 = follow "Retina Vivid Colors" setting; otherwise index into lookPresets,
         // lookPresets.length = Custom
         property int colorPreset: -1
@@ -66,6 +69,7 @@ Window {
         applyBitratePolicy();
         if (streaming) {
             applyColor();
+            enh.start();
             perf.start();
         }
     }
@@ -92,9 +96,11 @@ Window {
     onStreamingChanged: {
         if (streaming) {
             applyColor();
+            enh.start();
             perf.start();
         } else {
             perf.stop();
+            enh.stop();
         }
     }
     // The system drag (startSystemMove) owns the mouse, so save on every position change
@@ -253,6 +259,153 @@ Window {
     // Smart and live: V-Sync + Neural Engine on, then quality goes UP after 20 clean seconds and
     // DOWN after 3 bad seconds. A level that drops frames right after a step up is remembered
     // as this Mac's ceiling for the session, so it settles instead of bouncing.
+    // ---------- e11 Enhance ----------
+    // One button for a sharper, cleaner picture. Tiers (cheapest first):
+    //   0 Off, 1 Clean (Apple temporal noise filter: less blockiness),
+    //   2 Sharp (MetalFX spatial upscale to the screen's real size), 3 Sharp + Clean.
+    // Auto: starts at Sharp, steps DOWN after 2 bad seconds (1 right after a step up, and that
+    // level becomes this session's ceiling), steps UP after 20 clean seconds, forgives the ceiling
+    // after 2 clean minutes. On battery / Low Power Mode it stays at Sharp or below; when the Mac
+    // gets hot it backs off at once. Max = the highest tier this Mac allows, no stepping.
+    // MetalFX temporal / frame interpolation / denoised scaler need the game's depth and motion
+    // vectors, which a video stream doesn't have, so they are not used.
+    QtObject {
+        id: enh
+        readonly property var names: [qsTr("Off"), qsTr("Clean"), qsTr("Sharp"), qsTr("Sharp + Clean")]
+        readonly property var modeNames: [qsTr("Off"), qsTr("Auto"), qsTr("Max")]
+        property int tier: 0
+        property int ceiling: 3
+        property int bad: 0
+        property int good: 0
+        property int cleanStreak: 0
+        property int sinceUp: 999
+        property int metalWait: 0
+        property string status: ""
+        function apply(t) {
+            tier = t;
+            const mfx = t >= 2 && Chiaki.window.metalFXAvailable();
+            const clean = (t === 1 || t === 3) && Chiaki.window.cleanPictureAvailable();
+            if (mfx)
+                Chiaki.settings.neuralUpscale = false; // one upscaler at a time
+            if (Chiaki.settings.metalFXUpscale !== mfx)
+                Chiaki.settings.metalFXUpscale = mfx;
+            if (Chiaki.settings.cleanPicture !== clean)
+                Chiaki.settings.cleanPicture = clean;
+            if (clean)
+                Chiaki.settings.cleanPictureStrength = t === 3 ? 0.5 : 0.25;
+            metalWait = 0;
+            bad = 0;
+            good = 0;
+            perf.badSeconds = 0; // don't let Smart Auto also step down for the same drops
+        }
+        function cap() {
+            let c = ceiling;
+            if (Chiaki.window.onBatteryPower() || Chiaki.window.lowPowerMode())
+                c = Math.min(c, 2);
+            const heat = Chiaki.window.thermalLevel();
+            if (heat >= 3)
+                c = Math.min(c, 0);
+            else if (heat >= 2)
+                c = Math.min(c, 1);
+            return c;
+        }
+        function detail() {
+            if (tier >= 2 && Chiaki.window.metalFXActive())
+                return " · " + Chiaki.window.metalFXStatus().replace(qsTr("On: "), "");
+            return "";
+        }
+        function start() {
+            ceiling = 3;
+            cleanStreak = 0;
+            sinceUp = 999;
+            Chiaki.window.updateEnhanceTarget();
+            if (prefs.enhanceMode === 0) {
+                status = "";
+                enhTimer.stop();
+                return;
+            }
+            apply(prefs.enhanceMode === 2 ? cap() : Math.min(2, cap()));
+            status = qsTr("%1: %2").arg(modeNames[prefs.enhanceMode]).arg(names[tier]);
+            enhTimer.start();
+        }
+        function stop() { enhTimer.stop(); }
+        function setMode(m) {
+            prefs.enhanceMode = m;
+            if (m === 0)
+                apply(0);
+            if (quickWindow.streaming)
+                start();
+        }
+    }
+    Timer {
+        id: enhTimer
+        interval: 1000
+        repeat: true
+        onTriggered: {
+            if (prefs.enhanceMode === 0)
+                return;
+            Chiaki.window.updateEnhanceTarget();
+            // Pro Motion's extra frames can't be shown on a 60 Hz screen: no point paying for them
+            if (Chiaki.settings.proMotion && Chiaki.window.proMotionSurplus() > 0)
+                Chiaki.settings.proMotion = false;
+            enh.sinceUp++;
+            const dropped = Math.max(0, Chiaki.window.droppedFrames - Chiaki.window.proMotionSurplus());
+            if (dropped >= 3) {
+                enh.bad++;
+                enh.good = 0;
+                enh.cleanStreak = 0;
+            } else {
+                enh.good++;
+                enh.bad = 0;
+                enh.cleanStreak++;
+            }
+            if (enh.cleanStreak >= 120 && enh.ceiling < 3) {
+                enh.ceiling++;
+                enh.cleanStreak = 0;
+            }
+            // MetalFX not running (screen not bigger than the stream, or it switched itself off)
+            if (enh.tier >= 2) {
+                enh.metalWait = Chiaki.window.metalFXActive() ? 0 : enh.metalWait + 1;
+                if (enh.metalWait >= 6) {
+                    enh.ceiling = Math.min(enh.ceiling, 1);
+                    enh.apply(Math.min(enh.tier === 3 ? 1 : 0, enh.cap()));
+                    enh.status = qsTr("%1: %2 (Sharp not needed or not available at this window size)")
+                        .arg(enh.modeNames[prefs.enhanceMode]).arg(enh.names[enh.tier]);
+                    return;
+                }
+            }
+            const c = enh.cap();
+            if (enh.tier > c) {
+                enh.apply(c);
+                enh.status = qsTr("%1: %2 (saving power / cooling down)").arg(enh.modeNames[prefs.enhanceMode]).arg(enh.names[enh.tier]);
+                return;
+            }
+            if (prefs.enhanceMode === 2) {
+                if (enh.tier < c && enh.good >= 5)
+                    enh.apply(c);
+                enh.status = qsTr("Max: %1%2").arg(enh.names[enh.tier]).arg(enh.detail());
+                return;
+            }
+            const limit = enh.sinceUp <= 20 ? 1 : 2;
+            if (enh.bad >= limit && enh.tier > 0) {
+                if (enh.sinceUp <= 20)
+                    enh.ceiling = enh.tier - 1; // only the level that just failed is blamed
+                enh.sinceUp = 999;
+                enh.apply(enh.tier - 1);
+                enh.status = qsTr("Auto: %1 (lowered to stay smooth)").arg(enh.names[enh.tier]);
+                return;
+            }
+            if (enh.good >= 20 && enh.tier < c) {
+                enh.sinceUp = 0;
+                enh.apply(enh.tier + 1);
+                enh.status = qsTr("Auto: trying %1…").arg(enh.names[enh.tier]);
+                return;
+            }
+            if (enh.good >= 3)
+                enh.status = qsTr("Auto: %1 · smooth%2").arg(enh.names[enh.tier]).arg(enh.detail());
+        }
+    }
+
     QtObject {
         id: perf
         property int ceiling: 4          // highest level allowed this session (learned)
@@ -273,7 +426,7 @@ Window {
             cleanStreak = 0;
             if (prefs.autoPerformance2) {
                 Chiaki.settings.vSyncEnabled = true;
-                if (Chiaki.window.neuralUpscaleAvailable() && !Chiaki.settings.metalFXUpscale)
+                if (Chiaki.window.neuralUpscaleAvailable() && !Chiaki.settings.metalFXUpscale && prefs.enhanceMode === 0)
                     Chiaki.settings.neuralUpscale = true;
                 quickWindow.setLevel(quickWindow.chipMaxLevel());
                 status = qsTr("Auto: tuning for this Mac…");
@@ -310,7 +463,7 @@ Window {
             // Neural Engine experiment: if it's still dropping without it, it wasn't the cause
             if (perf.neuralOffTest > 0) {
                 perf.neuralOffTest--;
-                if (dropped >= 3 && Chiaki.window.neuralUpscaleAvailable() && !Chiaki.settings.metalFXUpscale) {
+                if (dropped >= 3 && Chiaki.window.neuralUpscaleAvailable() && !Chiaki.settings.metalFXUpscale && prefs.enhanceMode === 0) {
                     Chiaki.settings.neuralUpscale = true;
                     perf.neuralOffTest = 0;
                 } else if (perf.neuralOffTest === 0 && perf.goodSeconds > 0) {
@@ -479,6 +632,13 @@ Window {
                 tip: Chiaki.controllers.length > 1 ? qsTr("%1 controllers connected").arg(Chiaki.controllers.length)
                                                    : qsTr("Controller connected")
                 onClicked: quickWindow.expanded = true
+            }
+            Chip {
+                // e11 Enhance: click to cycle Off -> Auto -> Max
+                visible: !quickWindow.collapsed && Qt.platform.os === "osx"
+                text: "✨ " + enh.modeNames[prefs.enhanceMode]
+                selected: prefs.enhanceMode !== 0
+                onClicked: enh.setMode((prefs.enhanceMode + 1) % 3)
             }
             Chip {
                 id: shotChip
@@ -895,6 +1055,44 @@ Window {
                         }
 
                         // ----- Performance -----
+                        SectionTitle { text: qsTr("✨ Enhance (sharper, cleaner picture)"); visible: Qt.platform.os === "osx" }
+                        Flow {
+                            visible: Qt.platform.os === "osx"
+                            Layout.fillWidth: true
+                            spacing: 4
+                            Repeater {
+                                model: enh.modeNames
+                                delegate: Chip {
+                                    required property int index
+                                    required property string modelData
+                                    text: modelData
+                                    selected: prefs.enhanceMode === index
+                                    onClicked: enh.setMode(index)
+                                }
+                            }
+                        }
+                        Label {
+                            visible: Qt.platform.os === "osx"
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            font.pixelSize: 11
+                            color: Qt.rgba(1, 1, 1, 0.6)
+                            text: prefs.enhanceMode === 0 ? qsTr("Off: the stream as the PS5 sends it.")
+                                : (enh.status !== "" ? enh.status
+                                   : (prefs.enhanceMode === 1 ? qsTr("Auto: picks the best picture this Mac can hold, live.")
+                                                              : qsTr("Max: always the strongest this Mac allows.")))
+                        }
+                        Label {
+                            text: prefs.showAdvancedVideo ? qsTr("▾ Advanced picture options") : qsTr("▸ Advanced picture options")
+                            visible: Qt.platform.os === "osx"
+                            font.pixelSize: 11
+                            color: Material.accent
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: prefs.showAdvancedVideo = !prefs.showAdvancedVideo
+                            }
+                        }
                         SectionTitle { text: qsTr("Performance") }
                         Toggle {
                             text: qsTr("Auto (best quality this Mac can hold)")
@@ -932,11 +1130,16 @@ Window {
                             font.pixelSize: 11
                             color: Qt.rgba(1, 1, 1, 0.6)
                         }
+                        ColumnLayout {
+                            // advanced: the separate switches the Enhance button drives
+                            visible: prefs.showAdvancedVideo || Qt.platform.os !== "osx"
+                            Layout.fillWidth: true
+                            spacing: 6
                         Toggle {
                             text: qsTr("Neural Engine upscaling (Apple ML)")
                             enabled: Chiaki.window.neuralUpscaleAvailable()
                             checked: Chiaki.settings.neuralUpscale && enabled
-                            onToggled: Chiaki.settings.neuralUpscale = checked
+                            onToggled: { prefs.enhanceMode = 0; enh.stop(); Chiaki.settings.neuralUpscale = checked }
                         }
                         Label {
                             id: neuralStatus
@@ -956,7 +1159,7 @@ Window {
                             text: qsTr("MetalFX upscaling (GPU, lighter than Neural Engine)")
                             enabled: Chiaki.window.metalFXAvailable()
                             checked: Chiaki.settings.metalFXUpscale && enabled
-                            onToggled: Chiaki.settings.metalFXUpscale = checked
+                            onToggled: { prefs.enhanceMode = 0; enh.stop(); Chiaki.settings.metalFXUpscale = checked }
                         }
                         Label {
                             id: metalFXStatus
@@ -997,7 +1200,7 @@ Window {
                             text: qsTr("Clean picture (removes blockiness and noise)")
                             enabled: Chiaki.window.cleanPictureAvailable()
                             checked: Chiaki.settings.cleanPicture && enabled
-                            onToggled: Chiaki.settings.cleanPicture = checked
+                            onToggled: { prefs.enhanceMode = 0; enh.stop(); Chiaki.settings.cleanPicture = checked }
                         }
                         Flow {
                             visible: Chiaki.settings.cleanPicture && Chiaki.window.cleanPictureAvailable()
@@ -1030,6 +1233,7 @@ Window {
                                 running: quickWindow.expanded && quickWindow.visible && Chiaki.settings.cleanPicture
                                 onTriggered: cleanStatus.text = Chiaki.window.cleanPictureStatus()
                             }
+                        }
                         }
                         Toggle {
                             text: qsTr("V-Sync (no tearing, slightly more latency)")

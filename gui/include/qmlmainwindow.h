@@ -173,6 +173,13 @@ public:
     Q_INVOKABLE bool proMotionAvailable() const;
     Q_INVOKABLE bool metalFXAvailable() const;
     Q_INVOKABLE QString metalFXStatus() const;
+    // e11 Enhance (Auto policy)
+    Q_INVOKABLE void updateEnhanceTarget();
+    Q_INVOKABLE bool metalFXActive() const;
+    Q_INVOKABLE double metalFXP95Ms() const;
+    Q_INVOKABLE bool onBatteryPower() const;
+    Q_INVOKABLE bool lowPowerMode() const;
+    Q_INVOKABLE int thermalLevel() const;
     Q_INVOKABLE QString proMotionStatus() const;
     Q_INVOKABLE bool proMotionActive() const;
     Q_INVOKABLE int proMotionSurplus() const;

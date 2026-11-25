@@ -13,6 +13,8 @@
 #import <Metal/Metal.h>
 #import <MetalFX/MetalFX.h>
 #import <VideoToolbox/VideoToolbox.h>
+#include <IOKit/ps/IOPowerSources.h>
+#include <IOKit/ps/IOPSKeys.h>
 
 #include <algorithm>
 #include <atomic>
@@ -31,6 +33,8 @@ static std::atomic<bool> g_reset_requested{false};
 static std::atomic<int> g_active{0};
 static std::atomic<double> g_last_ms{0.0};
 static std::atomic<int> g_out_w{0}, g_out_h{0};
+static std::atomic<int> g_target_w{0}, g_target_h{0};
+static std::atomic<double> g_p95_ms{0.0};
 
 namespace {
 
@@ -46,7 +50,25 @@ struct State {
 	int width = 0, height = 0, out_w = 0, out_h = 0;
 	double avg_ms = 0.0;
 	int frames = 0;
+	double recent[120] = {};
+	int recent_n = 0, recent_i = 0;
+	int slow_windows = 0;
 };
+
+// Output size for an input of w x h: fit the shown size, keep the aspect ratio, at most 2x,
+// even dimensions. Returns false when the gain would be too small to be worth it.
+bool OutputSizeFor(int w, int h, int &ow, int &oh)
+{
+	double scale = 2.0;
+	const int tw = g_target_w.load(), th = g_target_h.load();
+	if (tw > 0 && th > 0)
+		scale = std::min(2.0, std::min((double)tw / w, (double)th / h));
+	if (scale < 1.1)
+		return false; // the screen isn't much bigger than the stream: nothing to gain
+	ow = ((int)(w * scale)) & ~1;
+	oh = ((int)(h * scale)) & ~1;
+	return ow > w && oh > h;
+}
 
 State g;
 
@@ -63,6 +85,9 @@ void Teardown()
 	g.width = g.height = g.out_w = g.out_h = 0;
 	g.avg_ms = 0.0;
 	g.frames = 0;
+	g.recent_n = g.recent_i = 0;
+	g.slow_windows = 0;
+	g_p95_ms = 0.0;
 	g_active = 0;
 	g_last_ms = 0.0;
 	g_out_w = 0;
@@ -84,7 +109,7 @@ CVPixelBufferPoolRef MakePool(int w, int h, OSType format)
 	return pool;
 }
 
-bool Setup(int w, int h)
+bool Setup(int w, int h, int ow, int oh)
 {
 	Teardown();
 	g.device = MTLCreateSystemDefaultDevice();
@@ -94,8 +119,8 @@ bool Setup(int w, int h)
 	if (!g.queue)
 		return false;
 
-	g.out_w = w * 2;
-	g.out_h = h * 2;
+	g.out_w = ow;
+	g.out_h = oh;
 	MTLFXSpatialScalerDescriptor *d = [[MTLFXSpatialScalerDescriptor alloc] init];
 	d.inputWidth = (NSUInteger)w;
 	d.inputHeight = (NSUInteger)h;
@@ -206,6 +231,41 @@ double MacMetalFXUpscale::LastProcessMs() { return g_last_ms; }
 int MacMetalFXUpscale::OutputWidth() { return g_out_w; }
 int MacMetalFXUpscale::OutputHeight() { return g_out_h; }
 
+void MacMetalFXUpscale::SetTargetSize(int width, int height)
+{
+	g_target_w = width;
+	g_target_h = height;
+}
+
+double MacMetalFXUpscale::P95Ms() { return Active() ? g_p95_ms.load() : 0.0; }
+
+bool MacSystemState::OnBattery()
+{
+	bool battery = false;
+	CFTypeRef info = IOPSCopyPowerSourcesInfo();
+	if (info) {
+		CFStringRef type = IOPSGetProvidingPowerSourceType(info);
+		battery = type && CFStringCompare(type, CFSTR(kIOPMBatteryPowerKey), 0) == kCFCompareEqualTo;
+		CFRelease(info);
+	}
+	return battery;
+}
+
+bool MacSystemState::LowPowerMode()
+{
+	@autoreleasepool {
+		NSProcessInfo *pi = [NSProcessInfo processInfo];
+		return [pi respondsToSelector:@selector(isLowPowerModeEnabled)] && pi.isLowPowerModeEnabled;
+	}
+}
+
+int MacSystemState::ThermalLevel()
+{
+	@autoreleasepool {
+		return (int)[NSProcessInfo processInfo].thermalState;
+	}
+}
+
 void MacMetalFXUpscale::Reset()
 {
 	g_failed = false;
@@ -232,11 +292,17 @@ AVFrame *MacMetalFXUpscale::Process(const AVFrame *f)
 	// already at or above 4K: nothing to gain
 	if (w <= 0 || h <= 0 || w > 2560 || h > 1440)
 		return nullptr;
+	int want_w = 0, want_h = 0;
+	if (!OutputSizeFor(w, h, want_w, want_h)) {
+		if (g.scaler)
+			Teardown();
+		return nullptr;
+	}
 
 	AVFrame *result = nullptr;
 	@autoreleasepool {
-		if (!g.scaler || w != g.width || h != g.height) {
-			if (!Setup(w, h)) {
+		if (!g.scaler || w != g.width || h != g.height || want_w != g.out_w || want_h != g.out_h) {
+			if (!Setup(w, h, want_w, want_h)) {
 				NSLog(@"[e11] MetalFX: not available for this stream, switching it off");
 				Teardown();
 				g_failed = true;
@@ -294,8 +360,21 @@ AVFrame *MacMetalFXUpscale::Process(const AVFrame *f)
 		g_out_h = g.out_h;
 		g.frames++;
 		g.avg_ms = g.frames == 1 ? ms : g.avg_ms * 0.95 + ms * 0.05;
-		if (g.frames > 180 && g.avg_ms > 9.0) {
-			NSLog(@"[e11] MetalFX: too slow on this Mac (%.1f ms/frame), switching it off for this stream", g.avg_ms);
+		g.recent[g.recent_i] = ms;
+		g.recent_i = (g.recent_i + 1) % 120;
+		g.recent_n = std::min(g.recent_n + 1, 120);
+		if (g.recent_n >= 60 && g.recent_i % 60 == 0) {
+			// every ~1 s: 95th percentile, so short spikes that cause stutter count too
+			double tmp[120];
+			std::copy(g.recent, g.recent + g.recent_n, tmp);
+			const int k = (int)(g.recent_n * 0.95);
+			std::nth_element(tmp, tmp + k, tmp + g.recent_n);
+			g_p95_ms = tmp[k];
+			g.slow_windows = tmp[k] > 11.0 ? g.slow_windows + 1 : 0;
+		}
+		if (g.frames > 180 && (g.avg_ms > 9.0 || g.slow_windows >= 3)) {
+			NSLog(@"[e11] MetalFX: too slow on this Mac (avg %.1f ms, p95 %.1f ms), switching it off for this stream",
+				g.avg_ms, g_p95_ms.load());
 			g_failed = true;
 		}
 		g_active = 1;
