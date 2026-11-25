@@ -56,6 +56,7 @@ Window {
         property real customShadows: 0.6
         property bool advancedOpen: false
         property int menuTab: 1
+        property bool gameLookDefaulted: false
         property bool showStats: false
     }
 
@@ -70,6 +71,11 @@ Window {
     Material.accent: "#5aa9ff"
 
     Component.onCompleted: {
+        // e11: Game is the default colour grade (once; the user's later choice is kept)
+        if (!prefs.gameLookDefaulted) {
+            prefs.gameLookDefaulted = true;
+            Chiaki.window.setLookLut("");
+        }
         collapsed = prefs.collapsed;
         applyBitratePolicy();
         if (streaming) {
@@ -902,17 +908,11 @@ Window {
                     spacing: 8
                     Label { text: qsTr("Picture"); color: "#5aa9ff"; font.pixelSize: 20; font.weight: Font.Black; Layout.bottomMargin: 4 }
 
-                    Label {
-                        text: qsTr("Game  ✓  (tuned for Mac screens)")
-                        color: "white"
-                        font.pixelSize: 13
-                    }
-                    // e11 colour grade: built-in LUT looks or your own .cube file
+                    // e11 colour grade: Game (tuned for Mac screens, the default), built-in looks or your own .cube file
                     Label {
                         text: qsTr("Colour grade")
-                        color: Qt.rgba(1, 1, 1, 0.75)
+                        color: "#8c97a6"
                         font.pixelSize: 12
-                        Layout.topMargin: 2
                     }
                     Flow {
                         id: lutFlow
@@ -925,7 +925,7 @@ Window {
                             function onLookLutChanged() { lutFlow.current = Chiaki.window.lookLut() }
                         }
                         Chip {
-                            text: qsTr("None")
+                            text: qsTr("Game")
                             selected: lutFlow.current === ""
                             onClicked: Chiaki.window.setLookLut("")
                         }
