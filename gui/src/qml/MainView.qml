@@ -781,7 +781,7 @@ Pane {
                             id: enhCol
                             anchors { left: parent.left; right: parent.right; top: parent.top; margins: 18 }
                             spacing: 10
-                            Label { text: qsTr("Graphics"); color: consolePane.cPink; font.pixelSize: 15; font.weight: Font.Black }
+                            Label { text: qsTr("e11FSR"); color: consolePane.cPink; font.pixelSize: 15; font.weight: Font.Black }
                             RowLayout {
                                 spacing: 6
                                 Chip { text: qsTr("Off"); tint: consolePane.cPink; onInk: "#12060d"; on: e11prefs.enhanceMode === 0; onClicked: e11prefs.enhanceMode = 0 }
@@ -793,9 +793,9 @@ Pane {
                                 wrapMode: Text.WordWrap
                                 color: consolePane.cDim
                                 font.pixelSize: 12
-                                text: e11prefs.enhanceMode === 0 ? qsTr("Plain picture, exactly as the PS5 sends it.")
-                                     : e11prefs.enhanceMode === 1 ? qsTr("The PS5 sends 1080p HD, Apple MetalFX makes it 1440p QHD. Steps back only when it must, then comes back.")
-                                     : qsTr("The PS5 sends 1080p HD, Apple MetalFX makes it 1440p QHD, all the time.")
+                                text: e11prefs.enhanceMode === 0 ? qsTr("The 1080p HD stream exactly as the PS5 sends it.")
+                                     : e11prefs.enhanceMode === 1 ? qsTr("The PS5 sends 1080p HD, Apple MetalFX upscales it to 1440p QHD. Steps back only when it must, then comes back.")
+                                     : qsTr("The PS5 sends 1080p HD, Apple MetalFX upscales it to 1440p QHD, all the time.")
                             }
                         }
                     }
