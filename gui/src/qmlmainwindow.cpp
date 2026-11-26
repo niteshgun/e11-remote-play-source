@@ -11,6 +11,7 @@
 #include "macFrameInterp.h"
 #include "macMetalFXUpscale.h"
 #include "macControllerSwitch.h"
+#include "macDisplayMode.h"
 #endif
 #include <QCursor>
 #include <QDesktopServices>
@@ -2860,6 +2861,36 @@ bool QmlMainWindow::metalFXAvailable() const
 int QmlMainWindow::screenRefreshHz() const
 {
     return screen() ? qRound(screen()->refreshRate()) : 60;
+}
+
+QVariantList QmlMainWindow::displayModes()
+{
+#ifdef Q_OS_MACOS
+    return MacDisplayMode::Modes(reinterpret_cast<void *>(winId()));
+#else
+    return {};
+#endif
+}
+
+bool QmlMainWindow::setDisplayMode(const QString &key)
+{
+#ifdef Q_OS_MACOS
+    if (key.isEmpty()) {
+        MacDisplayMode::Restore();
+        return true;
+    }
+    return MacDisplayMode::Set(reinterpret_cast<void *>(winId()), key);
+#else
+    Q_UNUSED(key);
+    return false;
+#endif
+}
+
+void QmlMainWindow::restoreDisplayMode()
+{
+#ifdef Q_OS_MACOS
+    MacDisplayMode::Restore();
+#endif
 }
 
 void QmlMainWindow::setComputerSoundMuted(bool muted)

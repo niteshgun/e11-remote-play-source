@@ -179,6 +179,10 @@ public:
     Q_INVOKABLE void setComputerSoundMuted(bool muted);
     // refresh rate of the screen e11 is on (60 on a MacBook Air, 120 on ProMotion)
     Q_INVOKABLE int screenRefreshHz() const;
+    // e11: the Mac screen's resolutions (System Settings list) and switching them while playing
+    Q_INVOKABLE QVariantList displayModes();
+    Q_INVOKABLE bool setDisplayMode(const QString &key);
+    Q_INVOKABLE void restoreDisplayMode();
     Q_INVOKABLE bool metalFXActive() const;
     Q_INVOKABLE double metalFXP95Ms() const;
     Q_INVOKABLE bool onBatteryPower() const;

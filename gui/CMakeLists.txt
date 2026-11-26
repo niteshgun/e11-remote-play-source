@@ -98,6 +98,8 @@ if(APPLE)
 		src/macPsnSignIn.mm
 		include/macWakeSleep.h
 		src/macWakeSleep.cpp
+		include/macDisplayMode.h
+		src/macDisplayMode.mm
 	)
 elseif(WIN32)
 	list(APPEND SOURCE_FILES

@@ -43,6 +43,8 @@ Window {
         property int colorPreset: -1
         // e11 Picture "Off": no colour grade, no look, no shadow lift (the picture exactly as the PS5 sends it)
         property bool pictureOff: false
+        // e11 Mac resolution while playing: "" = keep the System Settings resolution
+        property string macResolution: ""
         property real customBrightness: 0.0
         property real customContrast: 1.0
         property real customSaturation: 1.0
@@ -137,6 +139,7 @@ Window {
     readonly property bool streaming: !!Chiaki.session
     onStreamingChanged: {
         if (streaming) {
+            applyMacResolution();
             applyColor();
             Chiaki.window.setComputerSoundMuted(!prefs.soundOnComputer);
             if (Chiaki.window.aiPlayRecording())
@@ -146,6 +149,29 @@ Window {
         } else {
             perf.stop();
             enh.stop();
+            Chiaki.window.restoreDisplayMode(); // back to the System Settings resolution
+        }
+    }
+
+    // ---------- e11 Mac resolution ----------
+    property var macModes: []
+    function refreshMacModes() { macModes = Chiaki.window.displayModes(); }
+    function applyMacResolution() {
+        const wasFull = Chiaki.window.visibility === Window.FullScreen;
+        Chiaki.window.setDisplayMode(prefs.macResolution);
+        refreshMacModes();
+        // a resolution change can drop the window out of full screen: put it back
+        if (wasFull)
+            refullTimer.start();
+        Chiaki.window.updateEnhanceTarget();
+    }
+    Timer {
+        id: refullTimer
+        interval: 700
+        onTriggered: {
+            if (Chiaki.window.visibility !== Window.FullScreen)
+                Chiaki.window.showFullScreen();
+            Chiaki.window.updateEnhanceTarget();
         }
     }
     // The system drag (startSystemMove) owns the mouse, so save on every position change
@@ -1494,6 +1520,41 @@ Window {
                     width: parent.width - 12
                     spacing: 8
                     Label { text: qsTr("Display"); color: "#eef2f7"; font.pixelSize: 20; font.weight: Font.Black; Layout.bottomMargin: 4 }
+                    // e11: the Mac screen's resolution while playing (same list as System Settings > Displays)
+                    Label {
+                        visible: Qt.platform.os === "osx"
+                        text: qsTr("Mac resolution while playing")
+                        color: "#8c97a6"
+                        font.pixelSize: 12
+                    }
+                    Flow {
+                        visible: Qt.platform.os === "osx"
+                        Layout.fillWidth: true
+                        spacing: 4
+                        Component.onCompleted: quickWindow.refreshMacModes()
+                        Chip {
+                            text: qsTr("Mac setting")
+                            selected: prefs.macResolution === ""
+                            onClicked: { prefs.macResolution = ""; quickWindow.applyMacResolution(); }
+                        }
+                        Repeater {
+                            model: quickWindow.macModes
+                            delegate: Chip {
+                                required property var modelData
+                                text: modelData.label
+                                selected: prefs.macResolution === modelData.key
+                                onClicked: { prefs.macResolution = modelData.key; quickWindow.applyMacResolution(); }
+                            }
+                        }
+                    }
+                    Label {
+                        visible: Qt.platform.os === "osx"
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        color: "#8c97a6"
+                        font.pixelSize: 11
+                        text: qsTr("Only while e11 is streaming: your Mac goes back to its own setting when the stream ends or e11 quits. The top size is the sharpest.")
+                    }
                     Toggle {
                         text: qsTr("Stats on panel (FPS, bitrate, loss)")
                         checked: prefs.showStats
