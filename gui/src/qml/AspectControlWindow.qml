@@ -403,6 +403,9 @@ Window {
         }
         function cap() {
             let c = ceiling;
+            // Max: only back off when the Mac is critically hot
+            if (prefs.enhanceMode === 2)
+                return Chiaki.window.thermalLevel() >= 3 ? 0 : 3;
             if (Chiaki.window.onBatteryPower() || Chiaki.window.lowPowerMode())
                 c = Math.min(c, 2);
             const heat = Chiaki.window.thermalLevel();
@@ -495,8 +498,9 @@ Window {
                     return;
                 }
             }
-            // Lag budget: the upscaler may add at most ~6 ms (95th percentile) of a 16.7 ms frame
-            if (enh.tier >= 2 && Chiaki.window.metalFXP95Ms() > 6.0) {
+            // Lag budget (Auto only; Max means max): the upscaler may take at most ~10 ms (95th
+            // percentile) of a 16.7 ms frame before it starts costing frames
+            if (prefs.enhanceMode === 1 && enh.tier >= 2 && Chiaki.window.metalFXP95Ms() > 10.0) {
                 if (++enh.slowSeconds >= 3) {
                     enh.slowSeconds = 0;
                     enh.ceiling = Math.min(enh.ceiling, enh.tier - 1);

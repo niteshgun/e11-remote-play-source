@@ -2980,8 +2980,9 @@ QString QmlMainWindow::metalFXStatus() const
         return tr("MetalFX off");
     const QString in = e11ResolutionLabel(MacMetalFXUpscale::InputWidth(), MacMetalFXUpscale::InputHeight());
     if (MacMetalFXUpscale::Active())
-        return tr("MetalFX on: %1 → %2")
-            .arg(in, e11ResolutionLabel(MacMetalFXUpscale::OutputWidth(), MacMetalFXUpscale::OutputHeight()));
+        return tr("MetalFX on: %1 → %2 · %3 ms")
+            .arg(in, e11ResolutionLabel(MacMetalFXUpscale::OutputWidth(), MacMetalFXUpscale::OutputHeight()))
+            .arg(MacMetalFXUpscale::P95Ms() > 0 ? MacMetalFXUpscale::P95Ms() : MacMetalFXUpscale::LastProcessMs(), 0, 'f', 1);
     if (!session)
         return tr("MetalFX: starts with the stream");
     switch (MacMetalFXUpscale::CurrentReason()) {
