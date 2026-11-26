@@ -517,6 +517,20 @@ StreamSession::StreamSession(const StreamSessionConnectInfo &connect_info, QObje
 		CHIAKI_LOGI(GetChiakiLog(), "e11: no HDR screen and Graphics is Auto/Max: streaming H265 (SDR) so MetalFX can upscale");
 		chiaki_connect_info.video_profile.codec = CHIAKI_CODEC_H265;
 	}
+	// e11 Max/Auto recipe for a 1440p+ Mac screen at 60 fps: the PS5 sends 1080p60 (half the data of
+	// 1440p, so Wi-Fi loss doesn't eat frames) and MetalFX upscales it on the Mac to the screen's size.
+	// A 1440p/4K stream would leave MetalFX nothing to do and drop to ~30 fps over Wi-Fi.
+	if(QSettings().value("e11_quick_menu_v2/enhanceMode", 1).toInt() != 0
+		&& chiaki_connect_info.video_profile.height > 1080)
+	{
+		CHIAKI_LOGI(GetChiakiLog(), "e11: Graphics Auto/Max: streaming 1080p60 and upscaling with MetalFX (was %ux%u)",
+			chiaki_connect_info.video_profile.width, chiaki_connect_info.video_profile.height);
+		chiaki_connect_info.video_profile.width = 1920;
+		chiaki_connect_info.video_profile.height = 1080;
+		chiaki_connect_info.video_profile.max_fps = 60;
+		unsigned int &br = chiaki_connect_info.video_profile.bitrate;
+		br = br < 15000 ? 15000 : (br > 25000 ? 25000 : br);
+	}
 #endif
 	if(connect_info.duid.isEmpty())
 	{
