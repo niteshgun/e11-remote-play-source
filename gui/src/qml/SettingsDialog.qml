@@ -17,8 +17,8 @@ DialogView {
     property int selectedConsole: SettingsDialog.Console.PS5
     property bool quitControllerMapping: true
     id: dialog
-    title: qsTr("Settings")
-    header: qsTr("* Defaults in () to right of value or marked with (Default)")
+    title: qsTr("All settings")
+    header: ""
     buttonVisible: false
     function flickContainsItem(flick, item) {
         let current = item;
@@ -136,11 +136,11 @@ DialogView {
             return;
         switch (event.key) {
         case Qt.Key_PageUp:
-            bar.decrementCurrentIndex();
+            dialog.stepTab(-1);
             event.accepted = true;
             break;
         case Qt.Key_PageDown:
-            bar.incrementCurrentIndex();
+            dialog.stepTab(1);
             event.accepted = true;
             break;
         case Qt.Key_Up:
@@ -164,14 +164,128 @@ DialogView {
         }
     }
 
+    // e11: side menu in the order people look for things (index = page in the StackLayout below).
+    // L1 / R1 on the controller (Page Up / Page Down) go up and down this list.
+    readonly property var navOrder: [
+        { page: 1, label: qsTr("Picture & video"), color: "#5aa9ff", hint: qsTr("Window, sync, colours, decoder") },
+        { page: 2, label: qsTr("Stream quality"), color: "#b79bff", hint: qsTr("Resolution, fps, bitrate, codec") },
+        { page: 3, label: qsTr("Sound & network"), color: "#f2c94c", hint: qsTr("Speakers, mic, Wi-Fi warnings") },
+        { page: 6, label: qsTr("Controller"), color: "#5fd3a6", hint: qsTr("Buttons, haptics, touchpad") },
+        { page: 5, label: qsTr("Keyboard"), color: "#ff7ab8", hint: qsTr("Keys for every PS5 button") },
+        { page: 4, label: qsTr("Consoles"), color: "#5aa9ff", hint: qsTr("Linked PS5s, add or remove") },
+        { page: 7, label: qsTr("PSN & internet play"), color: "#b79bff", hint: qsTr("Sign in, play away from home") },
+        { page: 0, label: qsTr("General"), color: "#8c97a6", hint: qsTr("Disconnect, stream menu combo") },
+        { page: 8, label: qsTr("Backup & logs"), color: "#8c97a6", hint: qsTr("Import, export, profiles") }
+    ]
+    function navPos() {
+        for (let i = 0; i < navOrder.length; i++)
+            if (navOrder[i].page === bar.currentIndex)
+                return i;
+        return 0;
+    }
+    function stepTab(d) {
+        const n = navOrder.length;
+        bar.currentIndex = navOrder[(navPos() + d + n) % n].page;
+    }
+    Component.onCompleted: bar.currentIndex = navOrder[0].page
+
     Item {
+        Rectangle {
+            anchors.fill: parent
+            color: "#07090c"
+        }
+        // Side menu
+        Rectangle {
+            id: sideNav
+            anchors { top: parent.top; bottom: parent.bottom; left: parent.left }
+            width: 260
+            color: "#0b0e13"
+            Rectangle { anchors { top: parent.top; bottom: parent.bottom; right: parent.right } width: 1; color: "#1e2530" }
+            Flickable {
+                anchors.fill: parent
+                anchors.margins: 14
+                contentHeight: navCol.implicitHeight
+                clip: true
+                ColumnLayout {
+                    id: navCol
+                    width: parent.width
+                    spacing: 4
+                    Repeater {
+                        model: dialog.navOrder
+                        delegate: AbstractButton {
+                            id: navBtn
+                            required property var modelData
+                            readonly property bool current: bar.currentIndex === modelData.page
+                            Layout.fillWidth: true
+                            implicitHeight: 58
+                            focusPolicy: Qt.NoFocus
+                            hoverEnabled: true
+                            onClicked: bar.currentIndex = modelData.page
+                            background: Rectangle {
+                                radius: 12
+                                color: navBtn.hovered && !navBtn.current ? Qt.rgba(1, 1, 1, 0.04) : "transparent"
+                                border.width: 1.5
+                                border.color: navBtn.current ? navBtn.modelData.color : "transparent"
+                            }
+                            contentItem: RowLayout {
+                                spacing: 12
+                                Rectangle {
+                                    Layout.leftMargin: 6
+                                    width: 12; height: 12; radius: 6
+                                    color: "transparent"
+                                    border.width: 2
+                                    border.color: navBtn.modelData.color
+                                }
+                                ColumnLayout {
+                                    spacing: 2
+                                    Layout.fillWidth: true
+                                    Label {
+                                        text: navBtn.modelData.label
+                                        color: navBtn.current ? "#eef2f7" : "#b3bdc9"
+                                        font.pixelSize: 15
+                                        font.weight: navBtn.current ? Font.DemiBold : Font.Normal
+                                    }
+                                    Label {
+                                        text: navBtn.modelData.hint
+                                        color: "#8c97a6"
+                                        font.pixelSize: 11
+                                        elide: Text.ElideRight
+                                        Layout.fillWidth: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Label {
+                        Layout.topMargin: 14
+                        Layout.leftMargin: 8
+                        text: qsTr("L1 / R1 on the controller to switch")
+                        color: "#5c6675"
+                        font.pixelSize: 11
+                    }
+                }
+            }
+        }
+        // Page title in the page's colour
+        Label {
+            id: pageTitle
+            anchors { top: parent.top; left: sideNav.right; leftMargin: 34; topMargin: 24 }
+            text: dialog.navOrder[dialog.navPos()].label
+            color: dialog.navOrder[dialog.navPos()].color
+            font.pixelSize: 26
+            font.weight: Font.Black
+        }
+
         TabBar {
             id: bar
+            // e11: kept for the page index; the side menu replaces it on screen
+            visible: false
+            height: 0
             anchors {
-                top: parent.top
-                left: parent.left
+                top: pageTitle.bottom
+                left: sideNav.right
                 right: parent.right
-                topMargin: 5
+                topMargin: 6
             }
             TabButton {
                 id: general
@@ -252,7 +366,7 @@ DialogView {
             }
 
             TabButton {
-                text: qsTr("Audio/Wifi")
+                text: qsTr("Sound & network")
                 id: audio
                 focusPolicy: Qt.NoFocus
                 Image {
@@ -312,7 +426,7 @@ DialogView {
             }
 
             TabButton {
-                text: qsTr("Keys")
+                text: qsTr("Keyboard")
                 id: keys
                 focusPolicy: Qt.NoFocus
                 Image {
@@ -372,7 +486,7 @@ DialogView {
             }
 
             TabButton {
-                text: qsTr("Remote")
+                text: qsTr("PSN & internet play")
                 id: remote
                 focusPolicy: Qt.NoFocus
                 Image {
@@ -402,7 +516,7 @@ DialogView {
             }
 
             TabButton {
-                text: qsTr("Config")
+                text: qsTr("Backup & logs")
                 id: config
                 focusPolicy: Qt.NoFocus
                 Image {
@@ -423,9 +537,10 @@ DialogView {
         StackLayout {
             anchors {
                 top: bar.bottom
-                left: parent.left
+                left: sideNav.right
                 right: parent.right
                 bottom: parent.bottom
+                leftMargin: 10
             }
             currentIndex: bar.currentIndex
             onCurrentIndexChanged: {

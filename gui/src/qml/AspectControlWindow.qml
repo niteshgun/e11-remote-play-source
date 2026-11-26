@@ -35,6 +35,8 @@ Window {
         property bool autoPerformance2: true
         // e11 Enhance: 0 Off, 1 Auto (default), 2 Max
         property int enhanceMode: 1
+        // one-time: Graphics back to Auto (the default) for anyone who had Max saved
+        property bool enhanceAutoDefaulted: false
         // e11 Sound: true = this computer + TV (default), false = TV only (computer muted)
         property bool soundOnComputer: true
         property bool showAdvancedVideo: false
@@ -79,6 +81,10 @@ Window {
         if (!prefs.gameLookDefaulted) {
             prefs.gameLookDefaulted = true;
             Chiaki.window.setLookLut("");
+        }
+        if (!prefs.enhanceAutoDefaulted) {
+            prefs.enhanceAutoDefaulted = true;
+            prefs.enhanceMode = 1;
         }
         collapsed = prefs.collapsed;
         applyBitratePolicy();
@@ -179,8 +185,10 @@ Window {
     onYChanged: if (visible) prefs.posY = y
     onCollapsedChanged: {
         prefs.collapsed = collapsed;
-        if (collapsed)
+        if (collapsed) {
             expanded = false;
+            confirmLeave = false;
+        }
     }
 
     // ---------- live stats ----------
@@ -718,19 +726,54 @@ Window {
     }
 
     // Top bar: fixed size so it never moves when the numbers change
+    // e11 logo mark (used as the Home button, and alone when the bar is minimised)
+    component LogoMark: Label {
+        text: "e11"
+        color: "#eef2f7"
+        font.pixelSize: 15
+        font.weight: Font.Black
+        font.letterSpacing: -0.4
+    }
+
     Rectangle {
         id: pill
         anchors.left: parent.left
         width: implicitWidth
-        implicitWidth: row.implicitWidth + 20
-        implicitHeight: 50
-        radius: 14
-        color: "#eb0b0e13"
-        border.color: "#1e2530"
+        // Minimised: just the e11 logo in a small, see-through circle (click = show the bar)
+        implicitWidth: quickWindow.collapsed ? 44 : row.implicitWidth + 20
+        implicitHeight: quickWindow.collapsed ? 44 : 50
+        radius: quickWindow.collapsed ? 22 : 14
+        color: quickWindow.collapsed ? (miniHover.containsMouse ? "#cc0b0e13" : "#800b0e13") : "#eb0b0e13"
+        border.color: quickWindow.collapsed ? "#401e2530" : "#1e2530"
         border.width: 1
+
+        LogoMark {
+            visible: quickWindow.collapsed
+            anchors.centerIn: parent
+            opacity: miniHover.containsMouse ? 1.0 : 0.7
+        }
+        MouseArea {
+            id: miniHover
+            visible: quickWindow.collapsed
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            property point pressPos
+            property bool moved: false
+            onPressed: (m) => { pressPos = Qt.point(m.x, m.y); moved = false; }
+            onPositionChanged: (m) => {
+                // drag the circle around; a plain click shows the bar
+                if (pressed && !moved && Math.abs(m.x - pressPos.x) + Math.abs(m.y - pressPos.y) > 4) {
+                    moved = true;
+                    quickWindow.startSystemMove();
+                }
+            }
+            onClicked: if (!moved) { quickWindow.confirmLeave = false; quickWindow.collapsed = false; }
+        }
 
         RowLayout {
             id: row
+            visible: !quickWindow.collapsed
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: parent.left
             anchors.leftMargin: 8
@@ -856,13 +899,23 @@ Window {
                     }
                 }
             }
-            Chip {
+            // Home = the e11 logo (stop streaming and go back to Home, after a confirm)
+            Rectangle {
                 visible: !quickWindow.collapsed
-                text: qsTr("Home")
-                tint: "#f2c94c"
-                selected: true
-                tip: qsTr("Stop streaming and go back to Home")
-                onClicked: { quickWindow.expanded = false; quickWindow.confirmLeave = !quickWindow.confirmLeave; }
+                Layout.preferredWidth: 44
+                Layout.preferredHeight: 32
+                radius: 10
+                color: homeHover.containsMouse ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
+                border.width: 1.5
+                border.color: quickWindow.confirmLeave ? "#f2c94c" : "#1e2530"
+                LogoMark { anchors.centerIn: parent }
+                MouseArea {
+                    id: homeHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: { quickWindow.expanded = false; quickWindow.confirmLeave = !quickWindow.confirmLeave; }
+                }
             }
             Chip {
                 visible: !quickWindow.collapsed
@@ -872,6 +925,7 @@ Window {
                 onClicked: { quickWindow.confirmLeave = false; quickWindow.expanded = !quickWindow.expanded; }
             }
             Chip {
+                visible: !quickWindow.collapsed
                 Layout.preferredWidth: 64
                 text: quickWindow.collapsed ? qsTr("Show") : qsTr("Hide")
                 tip: quickWindow.collapsed ? qsTr("Show the bar") : qsTr("Shrink the bar")
