@@ -781,7 +781,7 @@ Pane {
                             id: enhCol
                             anchors { left: parent.left; right: parent.right; top: parent.top; margins: 18 }
                             spacing: 10
-                            Label { text: qsTr("e11FSR"); color: consolePane.cPink; font.pixelSize: 15; font.weight: Font.Black }
+                            Label { text: qsTr("MetalFX"); color: consolePane.cPink; font.pixelSize: 15; font.weight: Font.Black }
                             RowLayout {
                                 spacing: 6
                                 Chip { text: qsTr("Off"); tint: consolePane.cPink; onInk: "#12060d"; on: e11prefs.enhanceMode === 0; onClicked: e11prefs.enhanceMode = 0 }

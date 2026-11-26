@@ -863,7 +863,7 @@ Window {
                 // Graphics (MetalFX / Neural Engine): click to cycle Off -> Auto -> Max
                 visible: !quickWindow.collapsed && Qt.platform.os === "osx"
                 Layout.preferredWidth: 128
-                text: qsTr("e11FSR: %1").arg(enh.modeNames[prefs.enhanceMode])
+                text: qsTr("MetalFX: %1").arg(enh.modeNames[prefs.enhanceMode])
                 tint: "#ff7ab8"
                 selected: true
                 tip: qsTr("Sharper picture with MetalFX. Click to switch Off / Auto / Max")
@@ -952,7 +952,7 @@ Window {
     // Expanded quick menu: tabs on the left, one page at a time (DeskCleaner colours)
     readonly property var tabDefs: [
         { name: qsTr("Picture"), color: "#5aa9ff" },
-        { name: qsTr("e11FSR"), color: "#ff7ab8" },
+        { name: qsTr("MetalFX"), color: "#ff7ab8" },
         { name: qsTr("Sound"), color: "#f2c94c" },
         { name: qsTr("Stream"), color: "#b79bff" },
         { name: qsTr("Controller"), color: "#5fd3a6" },
@@ -1255,7 +1255,7 @@ Window {
                     id: pg1
                     width: parent.width - 12
                     spacing: 8
-                    Label { text: qsTr("e11FSR"); color: "#ff7ab8"; font.pixelSize: 20; font.weight: Font.Black; Layout.bottomMargin: 4 }
+                    Label { text: qsTr("MetalFX"); color: "#ff7ab8"; font.pixelSize: 20; font.weight: Font.Black; Layout.bottomMargin: 4 }
                     Flow {
                         visible: Qt.platform.os === "osx"
                         Layout.fillWidth: true
@@ -1277,10 +1277,10 @@ Window {
                         wrapMode: Text.WordWrap
                         font.pixelSize: 11
                         color: Qt.rgba(1, 1, 1, 0.6)
-                        text: prefs.enhanceMode === 0 ? qsTr("e11FSR Off: the 1080p HD stream exactly as the PS5 sends it.")
+                        text: prefs.enhanceMode === 0 ? qsTr("Off: the 1080p HD stream exactly as the PS5 sends it.")
                             : (enh.status !== "" ? enh.status
-                               : (prefs.enhanceMode === 1 ? qsTr("e11FSR Auto: the PS5 sends 1080p HD and Apple MetalFX upscales it to 1440p QHD on your Mac. Steps back to 1080p only when needed, then comes back.")
-                                                          : qsTr("e11FSR Max: the PS5 sends 1080p HD and Apple MetalFX upscales it to 1440p QHD on your Mac, all the time.")))
+                               : (prefs.enhanceMode === 1 ? qsTr("Auto: the PS5 sends 1080p HD and Apple MetalFX upscales it to 1440p QHD on your Mac. Steps back to 1080p only when needed, then comes back.")
+                                                          : qsTr("Max: the PS5 sends 1080p HD and Apple MetalFX upscales it to 1440p QHD on your Mac, all the time.")))
                     }
                     // e11: Off / Auto / Max is the only choice on Mac. The separate switches
                     // (Neural Engine, MetalFX, Pro Motion, Clean picture) are run by Auto/Max, never by hand.
@@ -1288,7 +1288,7 @@ Window {
                         visible: Qt.platform.os === "osx"
                         Layout.topMargin: 6
                         text: qsTr("Revert all")
-                        tip: qsTr("e11FSR back to Auto, picture back to Game")
+                        tip: qsTr("MetalFX back to Auto, picture back to Game")
                         onClicked: quickWindow.revertAll()
                     }
                     Label {
