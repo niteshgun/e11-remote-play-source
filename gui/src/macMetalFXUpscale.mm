@@ -602,9 +602,11 @@ AVFrame *MacMetalFXUpscale::Process(const AVFrame *f)
 			const int k = (int)(g.recent_n * 0.95);
 			std::nth_element(tmp, tmp + k, tmp + g.recent_n);
 			g_p95_ms = tmp[k];
-			g.slow_windows = tmp[k] > 11.0 ? g.slow_windows + 1 : 0;
+			g.slow_windows = tmp[k] > 14.0 ? g.slow_windows + 1 : 0;
 		}
-		if (g.frames > 180 && (g.avg_ms > 9.0 || g.slow_windows >= 3)) {
+		// Only give up when it truly can't fit in a 60 fps frame (16.7 ms). The old 9 ms / 11 ms limits
+		// switched it off on a warm Air for the rest of the stream (picture fell back 1440p -> 1080p).
+		if (g.frames > 180 && (g.avg_ms > 13.0 || g.slow_windows >= 5)) {
 			NSLog(@"[e11] MetalFX: too slow on this Mac (avg %.1f ms, p95 %.1f ms), switching it off for this stream",
 				g.avg_ms, g_p95_ms.load());
 			g_failed = true;

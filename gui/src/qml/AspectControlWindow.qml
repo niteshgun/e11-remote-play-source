@@ -427,11 +427,13 @@ Window {
                 return Chiaki.window.thermalLevel() >= 3 ? 0 : 2; // Sharp (MetalFX); Clean picture is its own switch
             if (Chiaki.window.onBatteryPower() || Chiaki.window.lowPowerMode())
                 c = Math.min(c, 2);
+            // MetalFX costs ~2 ms on the GPU, so only a critically hot Mac turns it off. "Serious" heat
+            // (normal for a fanless Air in a big game) used to drop it, flipping the picture 1440p -> 1080p.
             const heat = Chiaki.window.thermalLevel();
             if (heat >= 3)
                 c = Math.min(c, 0);
             else if (heat >= 2)
-                c = Math.min(c, 1);
+                c = Math.min(c, 2); // keep MetalFX, skip Clean picture
             return c;
         }
         function detail() {
@@ -509,9 +511,10 @@ Window {
             // MetalFX not running (screen not bigger than the stream, or it switched itself off)
             if (enh.tier >= 2) {
                 enh.metalWait = Chiaki.window.metalFXActive() ? 0 : enh.metalWait + 1;
-                if (enh.metalWait >= 6) {
-                    enh.ceiling = Math.min(enh.ceiling, 1);
-                    enh.apply(Math.min(enh.tier === 3 ? 1 : 0, enh.cap()));
+                // Leave MetalFX switched on: it pauses by itself while the window is small / changing
+                // (full screen on/off, minimised) and comes back the moment the window is big again.
+                // Turning it off here used to keep the picture at 1080p for the rest of the stream.
+                if (enh.metalWait >= 2) {
                     enh.status = qsTr("%1: %2 · %3")
                         .arg(enh.modeNames[prefs.enhanceMode]).arg(enh.names[enh.tier]).arg(Chiaki.window.metalFXStatus());
                     return;
@@ -519,7 +522,7 @@ Window {
             }
             // Lag budget (Auto only; Max means max): the upscaler may take at most ~10 ms (95th
             // percentile) of a 16.7 ms frame before it starts costing frames
-            if (prefs.enhanceMode === 1 && enh.tier >= 2 && Chiaki.window.metalFXP95Ms() > 10.0) {
+            if (prefs.enhanceMode === 1 && enh.tier >= 2 && Chiaki.window.metalFXP95Ms() > 12.0) {
                 if (++enh.slowSeconds >= 3) {
                     enh.slowSeconds = 0;
                     enh.ceiling = Math.min(enh.ceiling, enh.tier - 1);
