@@ -41,6 +41,8 @@ Window {
         // Look: -1 = follow "Retina Vivid Colors" setting; otherwise index into lookPresets,
         // lookPresets.length = Custom
         property int colorPreset: -1
+        // e11 Picture "Off": no colour grade, no look, no shadow lift (the picture exactly as the PS5 sends it)
+        property bool pictureOff: false
         property real customBrightness: 0.0
         property real customContrast: 1.0
         property real customSaturation: 1.0
@@ -274,7 +276,12 @@ Window {
                  sp: prefs.customSplit, vg: prefs.customVignette, gr: prefs.customGrain,
                  bl: prefs.customBloom, ry: prefs.customRays, sd: prefs.customShadows };
     }
+    readonly property var neutralLook: ({ b: 0.0, c: 1.0, s: 1.0, t: 0.0, sh: 0.0, cl: 0.0, vb: 0.0, sp: 0.0, vg: 0.0, gr: 0.0, bl: 0, ry: 0, sd: 0.0 })
     function applyColor() {
+        if (prefs.pictureOff) {
+            applyLook(neutralLook);
+            return;
+        }
         let p = effectivePreset;
         applyLook(p === customLook ? customLookValues() : lookPresets[Math.min(p, lookPresets.length - 1)]);
     }
@@ -976,23 +983,28 @@ Window {
                             function onLookLutChanged() { lutFlow.current = Chiaki.window.lookLut() }
                         }
                         Chip {
+                            text: qsTr("Off")
+                            selected: prefs.pictureOff
+                            onClicked: { prefs.pictureOff = true; Chiaki.window.setLookLut(""); quickWindow.applyColor(); }
+                        }
+                        Chip {
                             text: qsTr("Game")
-                            selected: lutFlow.current === ""
-                            onClicked: Chiaki.window.setLookLut("")
+                            selected: !prefs.pictureOff && lutFlow.current === ""
+                            onClicked: { prefs.pictureOff = false; Chiaki.window.setLookLut(""); quickWindow.applyColor(); }
                         }
                         Repeater {
                             model: Chiaki.window.builtinLuts()
                             delegate: Chip {
                                 required property var modelData
                                 text: modelData.name
-                                selected: lutFlow.current === modelData.id
-                                onClicked: Chiaki.window.setLookLut(modelData.id)
+                                selected: !prefs.pictureOff && lutFlow.current === modelData.id
+                                onClicked: { prefs.pictureOff = false; quickWindow.applyColor(); Chiaki.window.setLookLut(modelData.id) }
                             }
                         }
                         Chip {
                             readonly property bool custom: lutFlow.current !== "" && !lutFlow.current.startsWith("builtin:")
                             text: custom ? "🎨 " + lutFlow.current.split("/").pop() : qsTr("Import .cube…")
-                            selected: custom
+                            selected: !prefs.pictureOff && custom
                             onClicked: lutDialog.open()
                         }
                     }
@@ -1011,6 +1023,7 @@ Window {
                         onAccepted: {
                             lutFlow.error = Chiaki.window.setLookLut(selectedFile.toString())
                                 ? "" : qsTr("That file isn't a valid .cube LUT")
+                            if (lutFlow.error === "") { prefs.pictureOff = false; quickWindow.applyColor(); }
                         }
                     }
                     Flow {
