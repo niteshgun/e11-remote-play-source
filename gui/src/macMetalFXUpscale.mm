@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AGPL-3.0-only-OpenSSL
 // e11: MetalFX spatial upscaling of the stream (MTLFXSpatialScaler, macOS 13+).
 //
-// Per frame, all on the GPU except the final copy:
-//   decoded NV12 --VTPixelTransfer--> BGRA (w x h) --MetalFX spatial--> BGRA (2w x 2h)
-//   --VTPixelTransfer--> NV12 (2w x 2h) --copy--> AVFrame for the renderer.
+// Per frame, all on the GPU in ONE command buffer except the final copy (fast path):
+//   decoded NV12 --compute: YUV->RGB--> BGRA (w x h, GPU-only texture) --MetalFX spatial-->
+//   BGRA (ow x oh, GPU-only) --compute: RGB->YUV--> NV12 (ow x oh) --copy--> AVFrame.
+// If the compute kernels can't be built, the older path is used: VTPixelTransfer for both
+// conversions (two extra synchronous conversions per frame, much slower).
 // The decoder's buffer is only read, never kept. Compiled without ARC.
 
 #include "macMetalFXUpscale.h"
@@ -57,6 +59,11 @@ struct State {
 	CVPixelBufferPoolRef in_pool = nullptr;   // BGRA w x h
 	CVPixelBufferPoolRef out_pool = nullptr;  // BGRA 2w x 2h
 	CVPixelBufferPoolRef nv12_pool = nullptr; // NV12 2w x 2h
+	// e11 fast path: YUV<->RGB on the GPU in the same command buffer as MetalFX
+	id<MTLComputePipelineState> pso_to_rgb = nil;
+	id<MTLComputePipelineState> pso_to_yuv = nil;
+	id<MTLTexture> rgb_in = nil;   // BGRA w x h (private)
+	id<MTLTexture> rgb_out = nil;  // BGRA ow x oh (private)
 	int width = 0, height = 0, out_w = 0, out_h = 0;
 	double avg_ms = 0.0;
 	int frames = 0;
@@ -85,6 +92,10 @@ State g;
 void Teardown()
 {
 	if (g.scaler) { [g.scaler release]; g.scaler = nil; }
+	if (g.pso_to_rgb) { [g.pso_to_rgb release]; g.pso_to_rgb = nil; }
+	if (g.pso_to_yuv) { [g.pso_to_yuv release]; g.pso_to_yuv = nil; }
+	if (g.rgb_in) { [g.rgb_in release]; g.rgb_in = nil; }
+	if (g.rgb_out) { [g.rgb_out release]; g.rgb_out = nil; }
 	if (g.queue) { [g.queue release]; g.queue = nil; }
 	if (g.device) { [g.device release]; g.device = nil; }
 	if (g.tex_cache) { CVMetalTextureCacheFlush(g.tex_cache, 0); CFRelease(g.tex_cache); g.tex_cache = nullptr; }
@@ -117,6 +128,98 @@ CVPixelBufferPoolRef MakePool(int w, int h, OSType format)
 	if (CVPixelBufferPoolCreate(kCFAllocatorDefault, nullptr, (CFDictionaryRef)attrs, &pool) != kCVReturnSuccess)
 		return nullptr;
 	return pool;
+}
+
+// BT.709 YUV <-> RGB on the GPU. `full` = full-range YUV (else video range 16-235/240).
+static const char *kE11ConvertKernels = R"MSL(
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void e11_nv12_to_bgra(texture2d<float, access::read> lumaTex [[texture(0)]],
+                             texture2d<float, access::read> chromaTex [[texture(1)]],
+                             texture2d<float, access::write> rgbTex [[texture(2)]],
+                             constant uint &full [[buffer(0)]],
+                             uint2 gid [[thread_position_in_grid]])
+{
+    if (gid.x >= rgbTex.get_width() || gid.y >= rgbTex.get_height())
+        return;
+    float y = lumaTex.read(gid).r;
+    float2 c = chromaTex.read(gid / 2).rg;
+    if (full == 0) {
+        y = (y - 16.0 / 255.0) * (255.0 / 219.0);
+        c = (c - 128.0 / 255.0) * (255.0 / 224.0);
+    } else {
+        c = c - 128.0 / 255.0;
+    }
+    float3 rgb = float3(y + 1.5748 * c.y,
+                        y - 0.1873 * c.x - 0.4681 * c.y,
+                        y + 1.8556 * c.x);
+    rgbTex.write(float4(saturate(rgb), 1.0), gid);
+}
+
+// One thread per 2x2 block: four luma samples + one averaged chroma sample (video range out).
+kernel void e11_bgra_to_nv12(texture2d<float, access::read> rgbTex [[texture(0)]],
+                             texture2d<float, access::write> lumaTex [[texture(1)]],
+                             texture2d<float, access::write> chromaTex [[texture(2)]],
+                             uint2 gid [[thread_position_in_grid]])
+{
+    uint2 base = gid * 2;
+    uint w = rgbTex.get_width(), h = rgbTex.get_height();
+    if (base.x >= w || base.y >= h)
+        return;
+    float3 sum = float3(0.0);
+    for (uint dy = 0; dy < 2; dy++) {
+        for (uint dx = 0; dx < 2; dx++) {
+            uint2 p = min(base + uint2(dx, dy), uint2(w - 1, h - 1));
+            float3 rgb = rgbTex.read(p).rgb;
+            sum += rgb;
+            float y = dot(rgb, float3(0.2126, 0.7152, 0.0722));
+            lumaTex.write(float4(16.0 / 255.0 + y * (219.0 / 255.0), 0.0, 0.0, 1.0), p);
+        }
+    }
+    float3 rgb = sum * 0.25;
+    float y = dot(rgb, float3(0.2126, 0.7152, 0.0722));
+    float cb = (rgb.b - y) / 1.8556;
+    float cr = (rgb.r - y) / 1.5748;
+    chromaTex.write(float4(128.0 / 255.0 + cb * (224.0 / 255.0), 128.0 / 255.0 + cr * (224.0 / 255.0), 0.0, 1.0), gid);
+}
+)MSL";
+
+// Build the conversion kernels and the GPU-only RGB textures. False = use the VTPixelTransfer path.
+bool SetupFastPath(int w, int h)
+{
+	NSError *err = nil;
+	id<MTLLibrary> lib = [g.device newLibraryWithSource:[NSString stringWithUTF8String:kE11ConvertKernels] options:nil error:&err];
+	if (!lib) {
+		NSLog(@"[e11] MetalFX: fast path unavailable (kernels: %@), using the slower conversion", err);
+		return false;
+	}
+	id<MTLFunction> f1 = [lib newFunctionWithName:@"e11_nv12_to_bgra"];
+	id<MTLFunction> f2 = [lib newFunctionWithName:@"e11_bgra_to_nv12"];
+	if (f1) g.pso_to_rgb = [g.device newComputePipelineStateWithFunction:f1 error:&err];
+	if (f2) g.pso_to_yuv = [g.device newComputePipelineStateWithFunction:f2 error:&err];
+	[f1 release];
+	[f2 release];
+	[lib release];
+	MTLTextureDescriptor *td = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
+		width:(NSUInteger)w height:(NSUInteger)h mipmapped:NO];
+	td.storageMode = MTLStorageModePrivate;
+	td.usage = g.scaler.colorTextureUsage | MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite;
+	g.rgb_in = [g.device newTextureWithDescriptor:td];
+	MTLTextureDescriptor *to = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
+		width:(NSUInteger)g.out_w height:(NSUInteger)g.out_h mipmapped:NO];
+	to.storageMode = MTLStorageModePrivate;
+	to.usage = g.scaler.outputTextureUsage | MTLTextureUsageShaderRead | MTLTextureUsageRenderTarget;
+	g.rgb_out = [g.device newTextureWithDescriptor:to];
+	if (!g.pso_to_rgb || !g.pso_to_yuv || !g.rgb_in || !g.rgb_out) {
+		NSLog(@"[e11] MetalFX: fast path unavailable (%@), using the slower conversion", err);
+		if (g.pso_to_rgb) { [g.pso_to_rgb release]; g.pso_to_rgb = nil; }
+		if (g.pso_to_yuv) { [g.pso_to_yuv release]; g.pso_to_yuv = nil; }
+		if (g.rgb_in) { [g.rgb_in release]; g.rgb_in = nil; }
+		if (g.rgb_out) { [g.rgb_out release]; g.rgb_out = nil; }
+		return false;
+	}
+	return true;
 }
 
 bool Setup(int w, int h, int ow, int oh)
@@ -161,7 +264,9 @@ bool Setup(int w, int h, int ow, int oh)
 		return false;
 	g.width = w;
 	g.height = h;
-	NSLog(@"[e11] MetalFX: spatial upscaling %dx%d -> %dx%d on %@", w, h, g.out_w, g.out_h, g.device.name);
+	const bool fast = SetupFastPath(w, h);
+	NSLog(@"[e11] MetalFX: spatial upscaling %dx%d -> %dx%d on %@ (%s)", w, h, g.out_w, g.out_h, g.device.name,
+		fast ? "fast GPU path" : "VTPixelTransfer path");
 	return true;
 }
 
@@ -174,6 +279,85 @@ id<MTLTexture> TextureFor(CVPixelBufferRef pb, MTLTextureUsage usage, CVMetalTex
 			|| !*holder)
 		return nil;
 	return CVMetalTextureGetTexture(*holder);
+}
+
+// One plane of a (bi-planar) CVPixelBuffer as a Metal texture.
+id<MTLTexture> PlaneTexture(CVPixelBufferRef pb, size_t plane, MTLPixelFormat fmt, MTLTextureUsage usage, CVMetalTextureRef *holder)
+{
+	NSDictionary *attrs = @{ (id)kCVMetalTextureUsage: @(usage) };
+	*holder = nullptr;
+	if (CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, g.tex_cache, pb, (CFDictionaryRef)attrs, fmt,
+			CVPixelBufferGetWidthOfPlane(pb, plane), CVPixelBufferGetHeightOfPlane(pb, plane), plane, holder) != kCVReturnSuccess
+			|| !*holder)
+		return nil;
+	return CVMetalTextureGetTexture(*holder);
+}
+
+static MTLSize Groups(id<MTLComputePipelineState> pso, NSUInteger w, NSUInteger h, MTLSize *per_group)
+{
+	const NSUInteger tw = pso.threadExecutionWidth;
+	const NSUInteger th = std::max<NSUInteger>(1, pso.maxTotalThreadsPerThreadgroup / tw);
+	*per_group = MTLSizeMake(tw, th, 1);
+	return MTLSizeMake((w + tw - 1) / tw, (h + th - 1) / th, 1);
+}
+
+// Fast path: everything in one command buffer, one wait. Returns the NV12 output buffer or nullptr.
+CVPixelBufferRef ProcessFast(CVPixelBufferRef src)
+{
+	const OSType fmt = CVPixelBufferGetPixelFormatType(src);
+	if (fmt != kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange && fmt != kCVPixelFormatType_420YpCbCr8BiPlanarFullRange)
+		return nullptr;
+	const uint32_t full = fmt == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange ? 1 : 0;
+	CVPixelBufferRef nv = nullptr;
+	if (CVPixelBufferPoolCreatePixelBuffer(nullptr, g.nv12_pool, &nv) != kCVReturnSuccess)
+		return nullptr;
+	CVMetalTextureRef h[4] = {};
+	id<MTLTexture> src_y = PlaneTexture(src, 0, MTLPixelFormatR8Unorm, MTLTextureUsageShaderRead, &h[0]);
+	id<MTLTexture> src_c = PlaneTexture(src, 1, MTLPixelFormatRG8Unorm, MTLTextureUsageShaderRead, &h[1]);
+	id<MTLTexture> dst_y = PlaneTexture(nv, 0, MTLPixelFormatR8Unorm, MTLTextureUsageShaderWrite, &h[2]);
+	id<MTLTexture> dst_c = PlaneTexture(nv, 1, MTLPixelFormatRG8Unorm, MTLTextureUsageShaderWrite, &h[3]);
+	bool ok = false;
+	id<MTLCommandBuffer> cb = (src_y && src_c && dst_y && dst_c) ? [g.queue commandBuffer] : nil;
+	if (cb) {
+		MTLSize per = {};
+		id<MTLComputeCommandEncoder> e = [cb computeCommandEncoder];
+		[e setComputePipelineState:g.pso_to_rgb];
+		[e setTexture:src_y atIndex:0];
+		[e setTexture:src_c atIndex:1];
+		[e setTexture:g.rgb_in atIndex:2];
+		[e setBytes:&full length:sizeof(full) atIndex:0];
+		MTLSize groups = Groups(g.pso_to_rgb, g.rgb_in.width, g.rgb_in.height, &per);
+		[e dispatchThreadgroups:groups threadsPerThreadgroup:per];
+		[e endEncoding];
+
+		g.scaler.colorTexture = g.rgb_in;
+		g.scaler.outputTexture = g.rgb_out;
+		[g.scaler encodeToCommandBuffer:cb];
+		g.scaler.colorTexture = nil;
+		g.scaler.outputTexture = nil;
+
+		e = [cb computeCommandEncoder];
+		[e setComputePipelineState:g.pso_to_yuv];
+		[e setTexture:g.rgb_out atIndex:0];
+		[e setTexture:dst_y atIndex:1];
+		[e setTexture:dst_c atIndex:2];
+		groups = Groups(g.pso_to_yuv, (g.rgb_out.width + 1) / 2, (g.rgb_out.height + 1) / 2, &per);
+		[e dispatchThreadgroups:groups threadsPerThreadgroup:per];
+		[e endEncoding];
+
+		[cb commit];
+		[cb waitUntilCompleted];
+		ok = cb.status == MTLCommandBufferStatusCompleted;
+		if (!ok)
+			NSLog(@"[e11] MetalFX: GPU error: %@", cb.error);
+	}
+	for (CVMetalTextureRef t : h)
+		if (t) CFRelease(t);
+	if (!ok) {
+		CVPixelBufferRelease(nv);
+		return nullptr;
+	}
+	return nv;
 }
 
 AVFrame *CopyNV12(CVPixelBufferRef pb)
@@ -345,6 +529,14 @@ AVFrame *MacMetalFXUpscale::Process(const AVFrame *f)
 		}
 		const auto t0 = std::chrono::steady_clock::now();
 
+		if (g.pso_to_rgb) {
+			// fast path
+			CVPixelBufferRef nvf = ProcessFast(src);
+			if (nvf) {
+				result = CopyNV12(nvf);
+				CVPixelBufferRelease(nvf);
+			}
+		} else {
 		CVPixelBufferRef in = nullptr, out = nullptr, nv = nullptr;
 		CVMetalTextureRef in_holder = nullptr, out_holder = nullptr;
 		bool ok = CVPixelBufferPoolCreatePixelBuffer(nullptr, g.in_pool, &in) == kCVReturnSuccess
@@ -379,6 +571,7 @@ AVFrame *MacMetalFXUpscale::Process(const AVFrame *f)
 		if (in) CVPixelBufferRelease(in);
 		if (out) CVPixelBufferRelease(out);
 		if (nv) CVPixelBufferRelease(nv);
+		} // slow path
 		if (!result) {
 			NSLog(@"[e11] MetalFX: processing failed, switching it off");
 			g_failed = true;
