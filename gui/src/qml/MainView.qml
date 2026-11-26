@@ -39,6 +39,7 @@ Pane {
         property int enhanceMode: 1
         property bool soundOnComputer: true
         property bool fullHdDefaulted: false
+        property bool fps60Defaulted: false
     }
     // e11: always stream 1080p (the PS5's maximum), at home and over PSN; once, so a user's later choice is kept
     Component.onCompleted: {
@@ -46,6 +47,14 @@ Pane {
             e11prefs.fullHdDefaulted = true;
             Chiaki.settings.resolutionLocalPS5 = 4;
             Chiaki.settings.resolutionRemotePS5 = 4;
+        }
+        // e11: always 60 fps (30 stays an option in All settings); once, so a later choice is kept
+        if (!e11prefs.fps60Defaulted) {
+            e11prefs.fps60Defaulted = true;
+            Chiaki.settings.fpsLocalPS5 = 60;
+            Chiaki.settings.fpsRemotePS5 = 60;
+            Chiaki.settings.fpsLocalPS4 = 60;
+            Chiaki.settings.fpsRemotePS4 = 60;
         }
     }
 
