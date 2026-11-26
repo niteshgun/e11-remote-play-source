@@ -2902,6 +2902,10 @@ void QmlMainWindow::setComputerSoundMuted(bool muted)
 void QmlMainWindow::updateEnhanceTarget()
 {
 #ifdef Q_OS_MACOS
+    // Minimised / hidden / mid-animation: keep the last real size, so MetalFX is still on
+    // (at 1440p, not 1080p) the moment the window comes back.
+    if ((windowStates() & Qt::WindowMinimized) || !isExposed() || width() < 320 || height() < 180)
+        return;
     // the picture is shown at most at the window's size in real pixels
     const qreal dpr = devicePixelRatio();
     MacMetalFXUpscale::SetTargetSize(qRound(width() * dpr), qRound(height() * dpr));
@@ -8306,6 +8310,18 @@ bool QmlMainWindow::nvidiaCard() const
 
 bool QmlMainWindow::event(QEvent *event)
 {
+#ifdef Q_OS_MACOS
+    // e11: keep MetalFX's target in step with the window (resize, full screen on/off, minimise/restore)
+    switch (event->type()) {
+    case QEvent::Resize:
+    case QEvent::Expose:
+    case QEvent::WindowStateChange:
+        QTimer::singleShot(0, this, [this]() { updateEnhanceTarget(); });
+        break;
+    default:
+        break;
+    }
+#endif
     switch (event->type()) {
     case QEvent::MouseMove:
     case QEvent::MouseButtonPress:

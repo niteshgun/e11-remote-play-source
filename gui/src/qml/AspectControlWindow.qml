@@ -159,6 +159,17 @@ Window {
         }
     }
 
+    // e11 "Revert all": Graphics Auto, picture as shipped (Game grade, no custom look)
+    function revertAll() {
+        prefs.pictureOff = false;
+        prefs.colorPreset = -1;
+        Chiaki.window.setLookLut("");
+        Chiaki.settings.neuralUpscale = false;
+        Chiaki.settings.cleanPictureStrength = 0.25;
+        enh.setMode(1);
+        applyColor();
+    }
+
     // ---------- e11 Mac resolution ----------
     property var macModes: []
     function refreshMacModes() { macModes = Chiaki.window.displayModes(); }
@@ -1267,9 +1278,18 @@ Window {
                                : (prefs.enhanceMode === 1 ? qsTr("Auto: picks the best picture this Mac can hold, live.")
                                                           : qsTr("Max: always the strongest this Mac allows.")))
                     }
+                    // e11: Off / Auto / Max is the only choice on Mac. The separate switches
+                    // (Neural Engine, MetalFX, Pro Motion, Clean picture) are run by Auto/Max, never by hand.
+                    Chip {
+                        visible: Qt.platform.os === "osx"
+                        Layout.topMargin: 6
+                        text: qsTr("Revert all")
+                        tip: qsTr("Graphics back to Auto, picture back to Game")
+                        onClicked: quickWindow.revertAll()
+                    }
                     Label {
                         text: prefs.showAdvancedVideo ? qsTr("▾ Advanced picture options") : qsTr("▸ Advanced picture options")
-                        visible: Qt.platform.os === "osx"
+                        visible: false
                         font.pixelSize: 11
                         color: Material.accent
                         MouseArea {
@@ -1280,7 +1300,7 @@ Window {
                     }
                     ColumnLayout {
                         // advanced: the separate switches the Enhance button drives
-                        visible: prefs.showAdvancedVideo || Qt.platform.os !== "osx"
+                        visible: Qt.platform.os !== "osx"
                         Layout.fillWidth: true
                         spacing: 6
                     Toggle {
