@@ -245,6 +245,9 @@ DialogView {
                 y: Math.round((root.height - height) / 2)
                 title: qsTr("Linking your console")
                 modal: true
+                // e11 dark card
+                Overlay.modal: Rectangle { color: "#b307090c" }
+                background: Rectangle { radius: 18; color: "#0b0e13"; border.color: "#1e2530"; border.width: 1 }
                 closePolicy: Popup.NoAutoClose
                 standardButtons: Dialog.Cancel
                 Material.roundedScale: Material.MediumScale

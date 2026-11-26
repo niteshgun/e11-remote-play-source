@@ -25,7 +25,10 @@ Pane {
     readonly property color cMint: "#5fd3a6"
     readonly property color cLemon: "#f2c94c"
     readonly property color cPink: "#ff7ab8"
-    readonly property bool psnSignedIn: !!Chiaki.settings.psnAuthToken
+    // Sign-in saves the token from C++ (no settings change signal), so also re-check on psnTokenChanged
+    property int psnTick: 0
+    Connections { target: Chiaki; function onPsnTokenChanged() { consolePane.psnTick++ } }
+    readonly property bool psnSignedIn: psnTick >= 0 && !!Chiaki.settings.psnAuthToken
 
     background: Rectangle { color: consolePane.cGround }
 
@@ -56,7 +59,7 @@ Pane {
             else if(Chiaki.settings.remotePlayAsk)
             {
                 if(!Chiaki.settings.psnRefreshToken || !Chiaki.settings.psnAuthToken || !Chiaki.settings.psnAuthTokenExpiry || !Chiaki.settings.psnAccountId)
-                    root.showRemindDialog(qsTr("Play from anywhere"), qsTr("Sign in with PlayStation Network to:\n- link your PS5 automatically\n- play outside your home network\n\nA secure sign-in window opens and e11 picks up the result by itself.") + "\n\n" + qsTr("(You can also do this later from the sidebar.)"), true, () => root.showPSNTokenDialog(false));
+                    root.showRemindDialog(qsTr("Play from anywhere"), qsTr("Sign in with PlayStation Network to link your PS5 automatically and play outside your home network. A secure Sony window opens and e11 continues by itself. You can also do this later from the sidebar."), true, () => root.showPSNTokenDialog(false));
                 else
                     Chiaki.settings.remotePlayAsk = false;
             }
@@ -253,23 +256,24 @@ Pane {
     component Check: RowLayout {
         id: chk
         property bool ok: true
+        property bool known: true
         property string label: ""
         spacing: 6
         Rectangle {
             width: 16; height: 16; radius: 8
-            color: chk.ok ? Qt.alpha(consolePane.cMint, 0.18) : Qt.alpha(consolePane.cLemon, 0.18)
+            color: !chk.known ? Qt.alpha(consolePane.cDim, 0.18) : chk.ok ? Qt.alpha(consolePane.cMint, 0.18) : Qt.alpha(consolePane.cLemon, 0.18)
             Label {
                 anchors.centerIn: parent
-                text: chk.ok ? "✓" : "!"
+                text: !chk.known ? "?" : chk.ok ? "✓" : "!"
                 font.pixelSize: 10
                 font.bold: true
-                color: chk.ok ? consolePane.cMint : consolePane.cLemon
+                color: !chk.known ? consolePane.cDim : chk.ok ? consolePane.cMint : consolePane.cLemon
             }
         }
         Label {
             text: chk.label
             font.pixelSize: 13
-            color: chk.ok ? consolePane.cInk : consolePane.cLemon
+            color: !chk.known ? consolePane.cDim : chk.ok ? consolePane.cInk : consolePane.cLemon
         }
     }
 
@@ -277,7 +281,7 @@ Pane {
     QtObject {
         id: controllerCard
         property int tick: 0
-        property var smoothState: ({ bluetoothOn: false, airdropOn: false, handoffOn: false, sharingKnown: true })
+        property var smoothState: ({ bluetoothOn: false, airdropOn: false, handoffOn: false, airdropKnown: true, handoffKnown: true })
         readonly property bool anyWired: {
             tick;
             for (let i = 0; i < Chiaki.controllers.length; i++)
@@ -352,6 +356,17 @@ Pane {
                     text: consolePane.psnSignedIn ? qsTr("Refresh PSN consoles") : qsTr("Sign in with PSN")
                     tint: consolePane.cPink
                     onClicked: consolePane.psnSignedIn ? Chiaki.refreshPsnToken() : root.showPSNTokenDialog(false)
+                }
+                NavItem {
+                    text: qsTr("Sign out of PSN")
+                    tint: consolePane.cDim
+                    visible: consolePane.psnSignedIn
+                    onClicked: {
+                        Chiaki.settings.psnRefreshToken = ""
+                        Chiaki.settings.psnAuthToken = ""
+                        Chiaki.settings.psnAuthTokenExpiry = ""
+                        Chiaki.settings.psnAccountId = ""
+                    }
                 }
 
                 Label {
@@ -833,8 +848,8 @@ Pane {
                             spacing: 22
                             Check { ok: controllerCard.anyWired; label: controllerCard.anyWired ? qsTr("USB-C controller") : qsTr("Controller not on USB-C") }
                             Check { visible: Qt.platform.os === "osx"; ok: !controllerCard.smoothState.bluetoothOn; label: controllerCard.smoothState.bluetoothOn ? qsTr("Bluetooth on") : qsTr("Bluetooth off") }
-                            Check { visible: Qt.platform.os === "osx" && controllerCard.smoothState.sharingKnown; ok: !controllerCard.smoothState.airdropOn; label: controllerCard.smoothState.airdropOn ? qsTr("AirDrop on") : qsTr("AirDrop off") }
-                            Check { visible: Qt.platform.os === "osx" && controllerCard.smoothState.sharingKnown; ok: !controllerCard.smoothState.handoffOn; label: controllerCard.smoothState.handoffOn ? qsTr("Handoff on") : qsTr("Handoff off") }
+                            Check { visible: Qt.platform.os === "osx"; known: controllerCard.smoothState.airdropKnown; ok: !controllerCard.smoothState.airdropOn; label: !known ? qsTr("AirDrop: check it's off") : controllerCard.smoothState.airdropOn ? qsTr("AirDrop on") : qsTr("AirDrop off") }
+                            Check { visible: Qt.platform.os === "osx"; known: controllerCard.smoothState.handoffKnown; ok: !controllerCard.smoothState.handoffOn; label: !known ? qsTr("Handoff: check it's off") : controllerCard.smoothState.handoffOn ? qsTr("Handoff on") : qsTr("Handoff off") }
                         }
                     }
                 }
@@ -890,7 +905,7 @@ Pane {
                 model: [
                     { ok: controllerCard.anyWired, t: qsTr("1. Plug the controller into the Mac with USB-C"), d: qsTr("Wired is instant and never jumps to the PS5."), b: "" },
                     { ok: !controllerCard.smoothState.bluetoothOn, t: qsTr("2. Turn Bluetooth off while you play"), d: qsTr("Frees the radio for Wi-Fi. Your USB-C controller keeps working."), b: "bt" },
-                    { ok: controllerCard.smoothState.sharingKnown && !(controllerCard.smoothState.airdropOn || controllerCard.smoothState.handoffOn), t: qsTr("3. Turn off AirDrop and Handoff"), d: qsTr("AirDrop: No One. Handoff: off. They make Wi-Fi hop channels every few seconds, the classic Mac stutter."), b: "ah" },
+                    { ok: controllerCard.smoothState.airdropKnown && controllerCard.smoothState.handoffKnown && !(controllerCard.smoothState.airdropOn || controllerCard.smoothState.handoffOn), t: qsTr("3. Turn off AirDrop and Handoff"), d: qsTr("AirDrop: No One. Handoff: off. They make Wi-Fi hop channels every few seconds, the classic Mac stutter."), b: "ah" },
                     { ok: true, t: qsTr("4. Still lagging? Plug the PS5 into your router with ethernet"), d: qsTr("Then only the Mac is on Wi-Fi. Stay close to the router."), b: "" }
                 ]
                 delegate: RowLayout {

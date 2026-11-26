@@ -23,6 +23,10 @@ DialogView {
         Chiaki.handlePsnLoginRedirect(url.text.trim());
     }
     StackView.onActivated: {
+        if (Qt.platform.os === "osx" && dialog.login) {
+            macPanel.start();
+            return;
+        }
         if(login)
         {
             nativeLoginForm.visible = true;
@@ -39,6 +43,7 @@ DialogView {
         }
     }
     function close() {
+        Chiaki.closeMacPsnSignIn();
         if(webView.web)
         {
             dialog.closing = true;
@@ -52,6 +57,14 @@ DialogView {
     }
 
    Item {
+        MacSignInPanel {
+            id: macPanel
+            anchors.fill: parent
+            z: 100
+            visible: Qt.platform.os === "osx" && dialog.login
+            onRedirect: (u) => Chiaki.handlePsnLoginRedirect(u)
+            onCancelled: dialog.close()
+        }
         Item {
             id: nativeLoginForm
             Keys.onPressed: (event) => {
@@ -233,6 +246,8 @@ DialogView {
                     rightMargin: 10
                 }
                 Component.onCompleted: {
+                    if (Qt.platform.os === "osx")
+                        return; // e11: Mac signs in with the native Apple window (MacSignInPanel)
                     try {
                         web = Qt.createQmlObject("
                         import QtWebEngine

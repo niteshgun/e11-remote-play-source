@@ -75,7 +75,7 @@ int real_main(int argc, char *argv[])
 
 	QGuiApplication::setOrganizationName("e11");
 	QGuiApplication::setApplicationName("e11 Remote Play");
-	QGuiApplication::setApplicationVersion(CHIAKI_VERSION);
+	QGuiApplication::setApplicationVersion(E11_VERSION);
 	QGuiApplication::setApplicationDisplayName("e11: Remote Play");
 #if defined(Q_OS_MACOS)
 	// Use a plain CAMetalLayer for Vulkan windows. Qt's own layer presents in step with each
@@ -140,6 +140,10 @@ int real_main(int argc, char *argv[])
 	QGuiApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #ifdef CHIAKI_HAVE_WEBENGINE
 	QtWebEngineQuick::initialize();
+#endif
+#ifdef E11_APPSTORE
+	// App Sandbox: no JIT allowed, run QML in the interpreter
+	qputenv("QV4_FORCE_INTERPRETER", "1");
 #endif
 	QApplication app(argc, argv);
 

@@ -1,3 +1,4 @@
+#include <stdlib.h>
 // SPDX-License-Identifier: LicenseRef-AGPL-3.0-only-OpenSSL
 // Compiled without ARC.
 #include "macControllerSwitch.h"
@@ -47,12 +48,13 @@ bool MacControllerSwitch::BluetoothPowered()
 	}
 }
 
+// In the App Store build (App Sandbox) other apps' settings can't be read: report "unknown" (-1)
+static bool E11Sandboxed() { return getenv("APP_SANDBOX_CONTAINER_ID") != nullptr; }
+
 int MacControllerSwitch::AirDropOn()
 {
-#ifdef E11_APPSTORE
-	// The App Sandbox can't read other apps' settings: report "unknown".
-	return -1;
-#endif
+	if (E11Sandboxed())
+		return -1;
 	CFPreferencesAppSynchronize(CFSTR("com.apple.sharingd"));
 	CFPropertyListRef v = CFPreferencesCopyAppValue(CFSTR("DiscoverableMode"), CFSTR("com.apple.sharingd"));
 	int on = 1; // macOS default is "Contacts Only"
@@ -66,9 +68,8 @@ int MacControllerSwitch::AirDropOn()
 
 int MacControllerSwitch::HandoffOn()
 {
-#ifdef E11_APPSTORE
-	return -1;
-#endif
+	if (E11Sandboxed())
+		return -1;
 	CFStringRef app = CFSTR("com.apple.coreservices.useractivityd");
 	CFPreferencesSynchronize(app, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost);
 	CFPropertyListRef v = CFPreferencesCopyValue(CFSTR("ActivityAdvertisingAllowed"), app, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost);

@@ -1,4 +1,7 @@
 #include "qmlbackend.h"
+#ifdef Q_OS_MACOS
+#include "macPsnSignIn.h"
+#endif
 #include "aiplayrecorder.h"
 #include "e11screenshot.h"
 #ifdef Q_OS_MACOS
@@ -2643,7 +2646,9 @@ void QmlBackend::initPsnAuth(const QUrl &url, const QJSValue &callback)
         if (cb.isCallable())
             cb.call({error, false, true});
     });
-    connect(psnId, &PSNAccountID::AccountIDResponse, this, [cb]() {
+    connect(psnId, &PSNAccountID::AccountIDResponse, this, [this, cb]() {
+        // token is saved by now: let the UI (Home, sidebar) switch to "Signed in"
+        emit psnTokenChanged();
         if (cb.isCallable())
             cb.call({QString("[I] PSN Remote Connection Tokens Generated."), true, true});
     });
@@ -2759,4 +2764,29 @@ void PsnConnectionWorker::ConnectPsnConnection(StreamSession *session, const QSt
 {
     ChiakiErrorCode result = session->ConnectPsnConnection(duid, ps5);
     emit resultReady(result);
+}
+
+void QmlBackend::startMacPsnSignIn()
+{
+#ifdef Q_OS_MACOS
+    MacPsnSignIn::Start(psnLoginUrl(),
+        [this](const QUrl &url) { emit macPsnRedirect(url); },
+        [this]() { emit macPsnSignInClosed(); });
+#endif
+}
+
+void QmlBackend::closeMacPsnSignIn()
+{
+#ifdef Q_OS_MACOS
+    MacPsnSignIn::Close();
+#endif
+}
+
+bool QmlBackend::hasWebEngine() const
+{
+#ifdef CHIAKI_HAVE_WEBENGINE
+    return true;
+#else
+    return false;
+#endif
 }

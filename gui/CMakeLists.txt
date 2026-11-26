@@ -12,9 +12,7 @@ if(Qt6_VERSION VERSION_GREATER_EQUAL "6.10.0")
 	find_package(Qt6 REQUIRED COMPONENTS GuiPrivate)
 endif()
 
-if(NOT E11_APPSTORE)
-	find_package(Qt6 COMPONENTS WebEngineQuick)
-endif()
+find_package(Qt6 COMPONENTS WebEngineQuick)
 find_package(Qt6 COMPONENTS DBus)
 
 if(WIN32)
@@ -96,6 +94,8 @@ if(APPLE)
 		src/macMetalFXUpscale.mm
 		include/macControllerSwitch.h
 		src/macControllerSwitch.mm
+		include/macPsnSignIn.h
+		src/macPsnSignIn.mm
 		include/macWakeSleep.h
 		src/macWakeSleep.cpp
 	)
@@ -129,10 +129,11 @@ if (NOT APPLE)
 	target_compile_definitions(chiaki PRIVATE CHIAKI_HAVE_DBUS)
 endif()
 endif()
-if(E11_APPSTORE)
+if (E11_APPSTORE)
+	# Mac App Store build: App Sandbox, no Qt WebEngine (PSN sign-in uses the native WebKit window)
 	target_compile_definitions(chiaki PRIVATE E11_APPSTORE)
 endif()
-if (NOT E11_APPSTORE AND Qt6WebEngineQuick_FOUND)
+if (${Qt6WebEngineQuick_FOUND} AND NOT E11_APPSTORE)
 	target_link_libraries(chiaki Qt::WebEngineQuick)
 	target_compile_definitions(chiaki PRIVATE CHIAKI_HAVE_WEBENGINE)
 endif()
@@ -160,7 +161,7 @@ if(NOT CHIAKI_ENABLE_FFMPEG_DECODER)
 	message(FATAL_ERROR "Chiaki GUI requires CHIAKI_ENABLE_FFMPEG_DECODER=ON")
 endif()
 if(APPLE)
-	target_link_libraries(chiaki "-framework AVFoundation" "-framework IOKit" "-framework AppKit" "-framework ApplicationServices" "-framework VideoToolbox" "-framework CoreVideo" "-framework CoreMedia" "-framework IOBluetooth" "-framework GameController" "-framework Metal" "-framework MetalFX")
+	target_link_libraries(chiaki "-framework AVFoundation" "-framework IOKit" "-framework AppKit" "-framework ApplicationServices" "-framework VideoToolbox" "-framework CoreVideo" "-framework CoreMedia" "-framework IOBluetooth" "-framework GameController" "-framework WebKit" "-framework Metal" "-framework MetalFX")
 endif()
 
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fanalyzer")
@@ -168,7 +169,8 @@ set_target_properties(chiaki PROPERTIES
 		MACOSX_BUNDLE TRUE
 		MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/MacOSXBundleInfo.plist.in"
 		MACOSX_BUNDLE_BUNDLE_NAME "e11 Remote Play"
-		MACOSX_BUNDLE_BUNDLE_VERSION ${CHIAKI_VERSION}
+		MACOSX_BUNDLE_BUNDLE_VERSION ${E11_BUILD_NUMBER}
+		MACOSX_BUNDLE_SHORT_VERSION_STRING ${E11_VERSION}
 		MACOSX_BUNDLE_COPYRIGHT "e11. Based on chiaki-ng (Street Pea) and Chiaki (Florian Markl). AGPLv3."
 		MACOSX_BUNDLE_GUI_IDENTIFIER "com.e11.remoteplay"
 		MACOSX_BUNDLE_ICON_FILE e11remoteplay.icns

@@ -16,6 +16,8 @@
 	<string>6.0</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>${CMAKE_OSX_DEPLOYMENT_TARGET}</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>e11 Remote Play looks for your PS5 on your home network so you can play on this Mac.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>e11 Remote Play connects your game controller to this Mac.</string>
 	<key>CFBundleDisplayName</key>
@@ -25,7 +27,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>${MACOSX_BUNDLE_BUNDLE_VERSION}</string>
+	<string>${MACOSX_BUNDLE_SHORT_VERSION_STRING}</string>
 	<key>CFBundleVersion</key>
 	<string>${MACOSX_BUNDLE_BUNDLE_VERSION}</string>
 	<key>CSResourcesFileMapped</key>
@@ -35,7 +37,7 @@
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>For mic support, e11: Remote Play requires access to your microphone.</string>
+	<string>e11 Remote Play sends your voice to party and game chat on your PS5.</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.games</string>
 </dict>

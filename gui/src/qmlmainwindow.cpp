@@ -3133,15 +3133,18 @@ QVariantMap QmlMainWindow::smoothPlayStatus()
     QVariantMap m;
 #ifdef Q_OS_MACOS
     m["bluetoothOn"] = MacControllerSwitch::BluetoothPowered();
-    m["airdropOn"] = MacControllerSwitch::AirDropOn() == 1;
-    m["handoffOn"] = MacControllerSwitch::HandoffOn() == 1;
-    // -1 = can't read the setting (App Store sandbox)
-    m["sharingKnown"] = MacControllerSwitch::AirDropOn() != -1 && MacControllerSwitch::HandoffOn() != -1;
+    const int airdrop = MacControllerSwitch::AirDropOn();
+    const int handoff = MacControllerSwitch::HandoffOn();
+    m["airdropOn"] = airdrop == 1;
+    m["handoffOn"] = handoff == 1;
+    m["airdropKnown"] = airdrop != -1; // false in the App Store build (sandbox can't read it)
+    m["handoffKnown"] = handoff != -1;
 #else
     m["bluetoothOn"] = false;
     m["airdropOn"] = false;
     m["handoffOn"] = false;
-    m["sharingKnown"] = true;
+    m["airdropKnown"] = true;
+    m["handoffKnown"] = true;
 #endif
     return m;
 }
@@ -3461,6 +3464,9 @@ void QmlMainWindow::presentFrame(ChiakiFfmpegFrame frame, int32_t frames_lost, q
 
     if (!frame.frame)
         return;
+
+    e11_stream_w.storeRelaxed(frame.frame->width);
+    e11_stream_h.storeRelaxed(frame.frame->height);
 
     if (bypass_frame_queue) {
         {
@@ -8380,4 +8386,19 @@ bool QmlMainWindow::event(QEvent *event)
 QObject *QmlMainWindow::focusObject() const
 {
     return quick_window->focusObject();
+}
+
+QString QmlMainWindow::streamResolution() const
+{
+    const int w = e11_stream_w.loadRelaxed();
+    const int h = e11_stream_h.loadRelaxed();
+    if (w <= 0 || h <= 0)
+        return QString();
+    // Decoders can pad the height (1088 for 1080p); name the standard sizes, show anything else as-is
+    if (w == 1920 && (h == 1080 || h == 1088)) return QStringLiteral("1080p");
+    if (w == 1280 && h == 720) return QStringLiteral("720p");
+    if (w == 960 && (h == 540 || h == 544)) return QStringLiteral("540p");
+    if (w == 640 && h == 360) return QStringLiteral("360p");
+    if (w == 3840 && h == 2160) return QStringLiteral("2160p");
+    return QStringLiteral("%1×%2").arg(w).arg(h);
 }

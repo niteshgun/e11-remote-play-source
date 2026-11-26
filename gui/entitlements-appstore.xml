@@ -1,28 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Mac App Store build: App Sandbox on. Keep this list minimal; Apple rejects unused entitlements. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- e11 Remote Play, Mac App Store build (App Sandbox). -->
 <plist version="1.0">
 <dict>
-  <key>com.apple.security.app-sandbox</key>
-  <true/>
-  <!-- Connect to the console and PSN -->
-  <key>com.apple.security.network.client</key>
-  <true/>
-  <!-- Console discovery replies and Remote Play stream ports -->
-  <key>com.apple.security.network.server</key>
-  <true/>
-  <!-- Mic passthrough -->
-  <key>com.apple.security.device.audio-input</key>
-  <true/>
-  <!-- Bluetooth and USB controllers -->
-  <key>com.apple.security.device.bluetooth</key>
-  <true/>
-  <key>com.apple.security.device.usb</key>
-  <true/>
-  <!-- Screenshots go to Pictures, AI Play recordings to Movies -->
-  <key>com.apple.security.assets.pictures.read-write</key>
-  <true/>
-  <key>com.apple.security.assets.movies.read-write</key>
-  <true/>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- find, wake and stream from the console (UDP/TCP on the home network and over the internet) -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<key>com.apple.security.network.server</key>
+	<true/>
+	<!-- controllers: Bluetooth (move the controller from the PS5 to this Mac) and USB-C -->
+	<key>com.apple.security.device.bluetooth</key>
+	<true/>
+	<key>com.apple.security.device.usb</key>
+	<true/>
+	<!-- voice chat through the controller or Mac microphone -->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<!-- import your own .cube colour grade -->
+	<key>com.apple.security.files.user-selected.read-only</key>
+	<true/>
+	<!-- screenshots go to Pictures > e11 Screenshots -->
+	<key>com.apple.security.assets.pictures.read-write</key>
+	<true/>
 </dict>
 </plist>

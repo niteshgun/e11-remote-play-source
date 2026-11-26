@@ -188,6 +188,8 @@ public:
     Q_INVOKABLE bool proMotionActive() const;
     Q_INVOKABLE int proMotionSurplus() const;
     Q_INVOKABLE int displayHz() const;
+    // e11: the real size of the frames the PS5 is sending right now ("1080p", "720p", or WxH); "" before the first frame
+    Q_INVOKABLE QString streamResolution() const;
     Q_INVOKABLE QVariantList builtinLuts() const;
     Q_INVOKABLE QString lookLut() const;
     Q_INVOKABLE bool setLookLut(const QString &source);
@@ -551,4 +553,6 @@ private:
     } vk_funcs;
 
     friend class QmlBackend;
+    QAtomicInt e11_stream_w = 0;
+    QAtomicInt e11_stream_h = 0;
 };

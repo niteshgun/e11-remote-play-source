@@ -197,6 +197,10 @@ public:
     Q_INVOKABLE void stopAutoConnect();
     Q_INVOKABLE void setConsolePin(int index, QString console_pin);
     Q_INVOKABLE QString openPsnLink();
+    // e11: PSN sign-in in a native macOS window (no Qt WebEngine needed); result comes back as macPsnRedirect
+    Q_INVOKABLE void startMacPsnSignIn();
+    Q_INVOKABLE void closeMacPsnSignIn();
+    Q_INVOKABLE bool hasWebEngine() const;
     Q_INVOKABLE QString openPlaceboOptionsLink();
     Q_INVOKABLE void initPsnAuth(const QUrl &url, const QJSValue &callback);
     Q_INVOKABLE void psnCancel(bool stop_thread);
@@ -219,6 +223,8 @@ public:
 #endif
 
 signals:
+    void macPsnRedirect(const QUrl &url);
+    void macPsnSignInClosed();
     void sessionChanged(StreamSession *session);
     void psnConnect(StreamSession *session, const QString &duid, const bool &ps5);
     void showPsnView();

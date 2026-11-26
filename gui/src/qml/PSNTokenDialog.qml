@@ -12,8 +12,6 @@ DialogView {
     property var psnurl
     property var expired
     property bool closing: false
-    // e11: true once the sign-in has switched to the user's own browser
-    property bool browserMode: false
     title: {
         if(expired)
             qsTr("Sign in again with PlayStation Network")
@@ -30,35 +28,44 @@ DialogView {
             return;
         authStarted = true;
         clipWatch.running = false;
-        logDialog.open()
+        logArea.text = "";
+        // Mac: the result shows in the sign-in panel itself (no extra pop-up)
+        const onMac = Qt.platform.os === "osx";
+        if (onMac)
+            macPanel.phase = "working";
+        else {
+            logDialog.phase = "working";
+            logDialog.open()
+        }
         Chiaki.initPsnAuth(u, function(msg, ok, done) {
             if(ok)
                 Chiaki.settings.remotePlayAsk = false;
-            if (!done)
-                logArea.text += msg + "\n";
-            else
-            {
-                logArea.text += msg + "\n";
-                logDialog.standardButtons = Dialog.Close;
+            logArea.text += msg + "\n";
+            if (done) {
+                if (onMac)
+                    macPanel.phase = ok ? "ok" : "failed";
+                else
+                    logDialog.phase = ok ? "ok" : "failed";
                 if (!ok)
                     dialog.authStarted = false;
             }
         });
     }
     StackView.onActivated: {
-        Chiaki.settings.remotePlayAsk = true;
-        // e11: already switched to the browser (no built-in web view, e.g. App Store build)
-        if(dialog.browserMode)
+        if (Qt.platform.os === "osx") {
+            macPanel.start();
             return;
+        }
+        Chiaki.settings.remotePlayAsk = true;
         nativeTokenForm.visible = true;
         nativeTokenForm.forceActiveFocus(Qt.TabFocusReason);
         // e11: on Mac the sign-in opens inside the app and the result is picked up
-        // automatically (no copy/paste). Linux, and builds without Qt WebEngine
-        // (Mac App Store), use the user's own browser.
-        if(Qt.platform.os == "linux" || !webView.web)
+        // automatically (no copy/paste). Linux keeps the external browser.
+        if(Qt.platform.os == "linux")
             extBrowserButton.clicked();
     }
     function close() {
+        Chiaki.closeMacPsnSignIn();
         if(webView.web)
         {
             dialog.closing = true;
@@ -72,6 +79,16 @@ DialogView {
     }
 
     Item {
+        MacSignInPanel {
+            id: macPanel
+            anchors.fill: parent
+            z: 100
+            visible: Qt.platform.os === "osx"
+            onRedirect: (u) => dialog.startAuth(u)
+            onCancelled: dialog.close()
+            onDone: root.showMainView()
+            onAddConsole: { root.showMainView(); root.showManualHostDialog(); }
+        }
         Item {
             id: nativeTokenForm
             visible: false
@@ -155,7 +172,6 @@ DialogView {
                         focusPolicy: Qt.NoFocus
                         text: qsTr("Use my browser instead")
                         onClicked: {
-                            dialog.browserMode = true;
                             nativeTokenForm.visible = false;
                             psnTokenToolbar.visible = false;
                             nativeErrorGrid.visible = false;
@@ -282,6 +298,8 @@ DialogView {
                 }
                 property bool started: false
                 Component.onCompleted: {
+                    if (Qt.platform.os === "osx")
+                        return; // e11: Mac signs in with the native Apple window (MacSignInPanel)
                     try {
                         web = Qt.createQmlObject("
                         import QtWebEngine
@@ -410,52 +428,73 @@ DialogView {
         }
 
         Item {
-            Dialog {
+            E11Dialog {
                 id: logDialog
-                parent: Overlay.overlay
-                x: Math.round((root.width - width) / 2)
-                y: Math.round((root.height - height) / 2)
-                title: qsTr("Create PSN Automatic Remote Connection Token")
-                modal: true
+                // working -> ok | failed
+                property string phase: "working"
+                property bool addConsoleNext: false
+                title: phase === "ok" ? qsTr("Successfully signed in")
+                     : phase === "failed" ? qsTr("Couldn't sign in")
+                     : qsTr("Signing in…")
                 closePolicy: Popup.NoAutoClose
-                standardButtons: Dialog.Cancel
-                Material.roundedScale: Material.MediumScale
-                onOpened: logArea.forceActiveFocus(Qt.TabFocusReason)
-                onClosed: root.showMainView();
+                onOpened: (phase === "ok" ? addBtn : doneBtn).forceActiveFocus(Qt.TabFocusReason)
+                onPhaseChanged: if (phase === "ok") addBtn.forceActiveFocus(Qt.TabFocusReason)
+                onClosed: {
+                    root.showMainView();
+                    if (addConsoleNext) {
+                        addConsoleNext = false;
+                        root.showManualHostDialog();
+                    }
+                }
 
-                Flickable {
-                    id: logFlick
-                    implicitWidth: 600
-                    implicitHeight: 400
-                    clip: true
-                    contentWidth: logArea.contentWidth
-                    contentHeight: logArea.contentHeight
-                    flickableDirection: Flickable.AutoFlickIfNeeded
-                    ScrollBar.vertical: ScrollBar {
-                        id: logScrollbar
-                        policy: ScrollBar.AlwaysOn
-                        visible: logFlick.contentHeight > logFlick.implicitHeight
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 18
+
+                    RowLayout {
+                        visible: logDialog.phase === "working"
+                        spacing: 14
+                        BusyIndicator { running: logDialog.phase === "working"; implicitWidth: 28; implicitHeight: 28; Material.accent: "#5aa9ff" }
+                        Label { text: qsTr("Connecting your PlayStation account…"); color: "#8c97a6"; font.pixelSize: 15 }
                     }
 
                     Label {
-                        id: logArea
-                        width: logFlick.width
-                        wrapMode: TextEdit.Wrap
-                        Keys.onReturnPressed: if (logDialog.standardButtons == Dialog.Close) logDialog.close()
-                        Keys.onEscapePressed: logDialog.close()
-                        Keys.onPressed: (event) => {
-                            switch (event.key) {
-                            case Qt.Key_Up:
-                                if(logScrollbar.position > 0.001)
-                                    logFlick.flick(0, 500);
-                                event.accepted = true;
-                                break;
-                            case Qt.Key_Down:
-                                if(logScrollbar.position < 1.0 - logScrollbar.size - 0.001)
-                                    logFlick.flick(0, -500);
-                                event.accepted = true;
-                                break;
-                            }
+                        visible: logDialog.phase === "ok"
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        color: "#8c97a6"
+                        font.pixelSize: 15
+                        text: qsTr("You're connected to PlayStation Network. Next, add your PS5 so you can play.")
+                    }
+
+                    Label {
+                        visible: logDialog.phase === "failed"
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        color: "#8c97a6"
+                        font.pixelSize: 15
+                        text: qsTr("Sony didn't accept the sign-in. Wait a minute and try again.")
+                    }
+
+                    // Raw messages kept for troubleshooting, hidden from normal view
+                    Label { id: logArea; visible: false }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+                        Item { Layout.fillWidth: true }
+                        C.E11Button {
+                            id: doneBtn
+                            text: logDialog.phase === "working" ? qsTr("Cancel") : qsTr("Done")
+                            onClicked: logDialog.close()
+                        }
+                        C.E11Button {
+                            id: addBtn
+                            visible: logDialog.phase === "ok"
+                            primary: true
+                            tint: "#5fd3a6"
+                            text: qsTr("Add a console")
+                            onClicked: { logDialog.addConsoleNext = true; logDialog.close(); }
                         }
                     }
                 }

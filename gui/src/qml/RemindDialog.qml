@@ -6,18 +6,13 @@ import "controls" as C
 
 import org.streetpea.chiaking
 
-Dialog {
+E11Dialog {
     id: dialog
     property alias text: label.text
     property var remotePlay
     property var callback
     property bool newDialogOpen: false
     property Item restoreFocusItem
-    parent: Overlay.overlay
-    x: Math.round((root.width - width) / 2)
-    y: Math.round((root.height - height) / 2)
-    modal: true
-    Material.roundedScale: Material.MediumScale
     onOpened: label.forceActiveFocus(Qt.TabFocusReason)
     onAccepted: {
         newDialogOpen = true;
@@ -37,7 +32,7 @@ Dialog {
         if(!remotePlay && Chiaki.settings.remotePlayAsk)
         {
             if(!Chiaki.settings.psnRefreshToken || !Chiaki.settings.psnAuthToken || !Chiaki.settings.psnAuthTokenExpiry || !Chiaki.settings.psnAccountId)
-                root.showRemindDialog(qsTr("Remote Play via PSN"), qsTr("Would you like to connect to PSN?\nThis enables:\n- Automatic registration\n- Playing outside of your home network without port forwarding?") + "\n\n" + qsTr("(Note: If you select no now and want to do this later, go to the Config section of the settings.)"), true, () => root.showPSNTokenDialog(false));
+                root.showRemindDialog(qsTr("Play from anywhere"), qsTr("Sign in with PlayStation Network to link your PS5 automatically and play outside your home network. A secure Sony window opens and e11 continues by itself."), true, () => root.showPSNTokenDialog(false));
             else
                 Chiaki.settings.remotePlayAsk = false;
         }
@@ -49,87 +44,38 @@ Dialog {
         label.focus = false;
     }
 
-    Component.onCompleted: {
-        header.horizontalAlignment = Text.AlignHCenter;
-        // Qt 6.6: Workaround dialog background becoming immediately transparent during close animation
-        header.background = null;
-    }
-
     ColumnLayout {
-        spacing: 20
+        width: parent.width
+        spacing: 22
 
         Label {
             id: label
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            color: "#b3bdc9"
+            font.pixelSize: 14
+            lineHeight: 1.3
             Keys.onEscapePressed: dialog.reject()
             Keys.onReturnPressed: dialog.accept()
             Keys.onYesPressed: dialog.close()
         }
 
         RowLayout {
-            Layout.alignment: Qt.AlignCenter
-            spacing: 20
-
-            Button {
-                text: qsTr("Yes")
-                Material.background: Material.accent
-                flat: true
-                leftPadding: 50
-                onClicked: dialog.accept()
-                Material.roundedScale: Material.SmallScale
-
-                Image {
-                    anchors {
-                        left: parent.left
-                        verticalCenter: parent.verticalCenter
-                        leftMargin: 12
-                    }
-                    width: 28
-                    height: 28
-                    sourceSize: Qt.size(width, height)
-                    source: root.controllerButton("cross")
-                }
-            }
-
-            Button {
-                Material.background: Material.accent
-                text: qsTr("No")
-                flat: true
-                leftPadding: 50
+            Layout.fillWidth: true
+            spacing: 10
+            C.E11Button {
+                text: dialog.remotePlay ? qsTr("Don't ask again") : qsTr("No thanks")
                 onClicked: dialog.reject()
-                Material.roundedScale: Material.SmallScale
-
-                Image {
-                    anchors {
-                        left: parent.left
-                        verticalCenter: parent.verticalCenter
-                        leftMargin: 12
-                    }
-                    width: 28
-                    height: 28
-                    sourceSize: Qt.size(width, height)
-                    source: root.controllerButton("moon")
-                }
             }
-
-            Button {
-                Material.background: Material.accent
-                text: qsTr("Remind Me Later")
-                flat: true
-                leftPadding: 50
+            Item { Layout.fillWidth: true }
+            C.E11Button {
+                text: qsTr("Later")
                 onClicked: dialog.close()
-                Material.roundedScale: Material.SmallScale
-
-                Image {
-                    anchors {
-                        left: parent.left
-                        verticalCenter: parent.verticalCenter
-                        leftMargin: 12
-                    }
-                    width: 28
-                    height: 28
-                    sourceSize: Qt.size(width, height)
-                    source: root.controllerButton("pyramid")
-                }
+            }
+            C.E11Button {
+                text: dialog.remotePlay ? qsTr("Sign in") : qsTr("Yes")
+                primary: true
+                onClicked: dialog.accept()
             }
         }
     }

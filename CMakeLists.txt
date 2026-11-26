@@ -33,7 +33,7 @@ option(CHIAKI_GUI_ENABLE_SDL_GAMECONTROLLER "Use SDL Gamecontroller for Input" O
 option(CHIAKI_CLI_ARGP_STANDALONE "Search for standalone argp lib for CLI" OFF)
 option(CHIAKI_ENABLE_STEAM_SHORTCUT "Add ability to create Steam shortcut" ON)
 # e11: Mac App Store build. Turns off Qt WebEngine (not allowed on the App Store);
-# PSN sign-in then opens in the user's own browser instead.
+# PSN sign-in uses the native Apple (WebKit) window instead.
 option(E11_APPSTORE "Build for the Mac App Store (sandboxed, no Qt WebEngine)" OFF)
 tri_option(CHIAKI_USE_SYSTEM_JERASURE "Use system-provided jerasure instead of submodule" AUTO)
 tri_option(CHIAKI_USE_SYSTEM_NANOPB "Use system-provided nanopb instead of submodule" AUTO)
@@ -45,6 +45,13 @@ set(CHIAKI_VERSION_MAJOR 1)
 set(CHIAKI_VERSION_MINOR 10)
 set(CHIAKI_VERSION_PATCH 1)
 set(CHIAKI_VERSION ${CHIAKI_VERSION_MAJOR}.${CHIAKI_VERSION_MINOR}.${CHIAKI_VERSION_PATCH})
+
+# e11 Remote Play's own version (what users see). CHIAKI_VERSION stays the upstream base version.
+set(E11_VERSION_MAJOR 1)
+set(E11_VERSION_MINOR 0)
+set(E11_VERSION_PATCH 0)
+set(E11_VERSION ${E11_VERSION_MAJOR}.${E11_VERSION_MINOR}.${E11_VERSION_PATCH})
+set(E11_BUILD_NUMBER 1)
 
 set(CPACK_PACKAGE_NAME "chiaki-ng")
 set(CPACK_PACKAGE_DESCRIPTION "Open Source PlayStation Remote Play client for Linux, Mac, and Windows")
@@ -139,7 +146,7 @@ endif()
 
 add_subdirectory(third-party)
 
-add_definitions(-DCHIAKI_VERSION_MAJOR=${CHIAKI_VERSION_MAJOR} -DCHIAKI_VERSION_MINOR=${CHIAKI_VERSION_MINOR} -DCHIAKI_VERSION_PATCH=${CHIAKI_VERSION_PATCH} -DCHIAKI_VERSION=\"${CHIAKI_VERSION}\")
+add_definitions(-DCHIAKI_VERSION_MAJOR=${CHIAKI_VERSION_MAJOR} -DCHIAKI_VERSION_MINOR=${CHIAKI_VERSION_MINOR} -DCHIAKI_VERSION_PATCH=${CHIAKI_VERSION_PATCH} -DCHIAKI_VERSION=\"${CHIAKI_VERSION}\" -DE11_VERSION=\"${E11_VERSION}\")
 
 if(CHIAKI_LIB_ENABLE_MBEDTLS)
 	add_definitions(-DCHIAKI_LIB_ENABLE_MBEDTLS)

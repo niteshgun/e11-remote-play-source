@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Controls.Material
 
 RadioButton {
+    font.pixelSize: 15
     property bool firstInFocusChain: false
     property bool lastInFocusChain: false
 

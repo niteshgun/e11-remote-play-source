@@ -40,7 +40,7 @@ SessionLog::SessionLog(StreamSession *session, uint32_t level_mask, const QStrin
 		}
 	}
 
-	CHIAKI_LOGI(&log, "Chiaki Version " CHIAKI_VERSION);
+	CHIAKI_LOGI(&log, "e11 Remote Play " E11_VERSION " (chiaki-ng base " CHIAKI_VERSION ")");
 }
 
 SessionLog::~SessionLog()

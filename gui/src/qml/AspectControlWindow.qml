@@ -140,6 +140,7 @@ Window {
     }
     // Fixed slots for the bar: each number has its own fixed-width cell, so the bar never changes size
     property string sFps: "–"
+    property string sRes: "–"
     property string sMbps: "–"
     property string sLoss: "–"
     property int sDropped: 0
@@ -149,6 +150,8 @@ Window {
         let dropped = Math.max(0, Chiaki.window.droppedFrames - Chiaki.window.proMotionSurplus());
         let shown = Math.max(0, Math.min(pm ? fps * 2 : fps, Chiaki.window.displayHz()) - dropped);
         sShown = shown;
+        let r = Chiaki.window.streamResolution();
+        sRes = r !== "" ? r : "–";
         sFps = String(shown);
         sDropped = dropped;
         if (Chiaki.session) {
@@ -685,6 +688,8 @@ Window {
                         color: "#eef2f7"
                         elide: Text.ElideNone
                     }
+                    StatCell { width: 70; text: quickWindow.sRes; color: "#eef2f7" }
+                    Rectangle { width: 1; height: 34; color: "#1e2530" }
                     StatCell { width: 80; text: quickWindow.sFps + " fps"; color: quickWindow.sShown >= 55 || quickWindow.fps === 0 ? "#5fd3a6" : "#f2c94c" }
                     Rectangle { width: 1; height: 34; color: "#1e2530" }
                     StatCell { width: 104; text: quickWindow.sMbps + " Mbps" }

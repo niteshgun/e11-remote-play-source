@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Controls.Material
 
 CheckBox {
+    font.pixelSize: 15
     property bool firstInFocusChain: false
     property bool lastInFocusChain: false
     property bool sendOutput: false

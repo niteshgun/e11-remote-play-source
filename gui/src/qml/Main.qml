@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
 import QtQuick.Controls.Material
+import "controls" as C
 
 import org.streetpea.chiaking
 
@@ -457,58 +458,36 @@ Item {
         }
     }
 
-    Dialog {
+    E11Dialog {
         id: infoDialog
         property alias text: infoDialogLabel.text
         property Item restoreFocusItem
-        parent: Overlay.overlay
-        x: Math.round((root.width - width) / 2)
-        y: Math.round((root.height - height) / 2)
-        modal: true
-        Material.roundedScale: Material.MediumScale
         onOpened: infoDialogLabel.forceActiveFocus(Qt.TabFocusReason)
         onClosed: {
             if (restoreFocusItem)
                 restoreFocusItem.forceActiveFocus(Qt.TabFocusReason);
             infoDialogLabel.focus = false;
         }
-
-        Component.onCompleted: {
-            header.horizontalAlignment = Text.AlignHCenter;
-            header.background = null;
-        }
-
         ColumnLayout {
-            spacing: 20
-
+            width: parent.width
+            spacing: 22
             Label {
                 id: infoDialogLabel
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                color: "#b3bdc9"
+                font.pixelSize: 14
+                lineHeight: 1.3
                 Keys.onEscapePressed: infoDialog.close()
                 Keys.onReturnPressed: infoDialog.close()
             }
-
             RowLayout {
-                Layout.alignment: Qt.AlignCenter
-
-                Button {
+                Layout.fillWidth: true
+                Item { Layout.fillWidth: true }
+                C.E11Button {
                     text: qsTr("OK")
-                    Material.background: Material.accent
-                    flat: true
-                    leftPadding: 50
+                    primary: true
                     onClicked: infoDialog.close()
-                    Material.roundedScale: Material.SmallScale
-
-                    Image {
-                        anchors {
-                            left: parent.left
-                            verticalCenter: parent.verticalCenter
-                            leftMargin: 12
-                        }
-                        width: 28
-                        height: 28
-                        sourceSize: Qt.size(width, height)
-                        source: root.controllerButton("cross")
-                    }
                 }
             }
         }

@@ -3,6 +3,9 @@
     <file>qtquickcontrols2.conf</file>
     <file>Main.qml</file>
     <file>Splash.qml</file>
+    <file>E11Dialog.qml</file>
+    <file>controls/E11Button.qml</file>
+    <file>MacSignInPanel.qml</file>
     <file>MainView.qml</file>
     <file>StreamView.qml</file>
     <file>StreamMenuWindow.qml</file>

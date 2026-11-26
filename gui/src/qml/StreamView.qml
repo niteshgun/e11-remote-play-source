@@ -919,6 +919,9 @@ Item {
         x: Math.round((root.width - width) / 2)
         y: Math.round((root.height - height) / 2)
         modal: true
+        // e11 dark card
+        Overlay.modal: Rectangle { color: "#b307090c" }
+        background: Rectangle { radius: 18; color: "#0b0e13"; border.color: "#1e2530"; border.width: 1 }
         padding: 30
         onAboutToShow: {
             closeAction = 0;
@@ -1098,6 +1101,9 @@ Item {
         y: Math.round((root.height - height) / 2)
         title: qsTr("Console Login PIN")
         modal: true
+        // e11 dark card
+        Overlay.modal: Rectangle { color: "#b307090c" }
+        background: Rectangle { radius: 18; color: "#0b0e13"; border.color: "#1e2530"; border.width: 1 }
         closePolicy: Popup.NoAutoClose
         standardButtons: Dialog.Ok | Dialog.Cancel
         onAboutToShow: {
