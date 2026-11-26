@@ -345,7 +345,12 @@ Window {
         property int cleanStreak: 0
         property int sinceUp: 999
         property int metalWait: 0
+        property bool proMotionDropped: false // Auto turned Pro Motion off this session to stay smooth
         property string status: ""
+        // Pro Motion (60 -> 120 fps) only helps on a 100 Hz+ screen (ProMotion MacBook Pro, 120 Hz monitor)
+        function proMotionOk() {
+            return Chiaki.window.proMotionAvailable() && Chiaki.window.screenRefreshHz() >= 100;
+        }
         function apply(t) {
             tier = t;
             const mfx = t >= 2 && Chiaki.window.metalFXAvailable();
@@ -390,20 +395,27 @@ Window {
             if (Chiaki.settings.proMotion && Chiaki.window.screenRefreshHz() < 100)
                 Chiaki.settings.proMotion = false;
             Chiaki.window.updateEnhanceTarget();
+            proMotionDropped = false;
             if (prefs.enhanceMode === 0) {
                 status = "";
                 enhTimer.stop();
                 return;
             }
             apply(prefs.enhanceMode === 2 ? cap() : Math.min(2, cap()));
+            // Auto and Max use Pro Motion too, on screens that can show 120 fps
+            if (proMotionOk() && !Chiaki.settings.proMotion)
+                Chiaki.settings.proMotion = true;
             status = qsTr("%1: %2").arg(modeNames[prefs.enhanceMode]).arg(names[tier]);
             enhTimer.start();
         }
         function stop() { enhTimer.stop(); }
         function setMode(m) {
             prefs.enhanceMode = m;
-            if (m === 0)
+            if (m === 0) {
                 apply(0);
+                if (Chiaki.settings.proMotion)
+                    Chiaki.settings.proMotion = false; // Off = the picture exactly as the PS5 sends it
+            }
             if (quickWindow.streaming)
                 start();
         }
@@ -471,6 +483,14 @@ Window {
                 return;
             }
             const limit = enh.sinceUp <= 20 ? 1 : 2;
+            // Dropping frames: Pro Motion is the first thing to go (it costs the most), then the picture tier
+            if (enh.bad >= limit && Chiaki.settings.proMotion) {
+                Chiaki.settings.proMotion = false;
+                enh.proMotionDropped = true;
+                enh.bad = 0;
+                enh.status = qsTr("Auto: Pro Motion off to stay smooth");
+                return;
+            }
             if (enh.bad >= limit && enh.tier > 0) {
                 if (enh.sinceUp <= 20)
                     enh.ceiling = enh.tier - 1; // only the level that just failed is blamed
