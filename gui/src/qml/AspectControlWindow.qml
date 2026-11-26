@@ -858,10 +858,10 @@ Window {
             }
             Chip {
                 visible: !quickWindow.collapsed
-                text: qsTr("Main menu")
+                text: qsTr("Home")
                 tint: "#f2c94c"
                 selected: true
-                tip: qsTr("Stop streaming and go back to the main menu")
+                tip: qsTr("Stop streaming and go back to Home")
                 onClicked: { quickWindow.expanded = false; quickWindow.confirmLeave = !quickWindow.confirmLeave; }
             }
             Chip {
@@ -918,7 +918,7 @@ Window {
                 Layout.alignment: Qt.AlignRight
                 spacing: 8
                 Chip { text: qsTr("Keep playing"); implicitHeight: 36; onClicked: quickWindow.confirmLeave = false }
-                Chip { text: qsTr("Main menu"); tint: "#f2c94c"; selected: true; implicitHeight: 36
+                Chip { text: qsTr("Home"); tint: "#f2c94c"; selected: true; implicitHeight: 36
                         onClicked: { quickWindow.confirmLeave = false; Chiaki.stopSession(false); } }
             }
         }
