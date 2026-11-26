@@ -380,6 +380,8 @@ Pane {
                     Layout.bottomMargin: 4
                 }
                 NavItem { text: qsTr("Smooth play"); tint: consolePane.cLemon; onClicked: smoothPopup.open() }
+                // e11: every setting (video, stream, audio, keys, controllers...) in one clear place
+                NavItem { id: settingsButton; text: qsTr("All settings"); tint: consolePane.cLilac; onClicked: root.showSettingsDialog() }
                 NavItem {
                     text: qsTr("Steam shortcut"); tint: consolePane.cSky
                     visible: typeof Chiaki.createSteamShortcut === "function" && Qt.platform.os !== "osx"
@@ -388,7 +390,6 @@ Pane {
 
                 Item { Layout.fillHeight: true }
 
-                NavItem { id: settingsButton; text: qsTr("Settings"); tint: consolePane.cDim; onClicked: root.showSettingsDialog() }
                 NavItem { text: qsTr("Quit"); tint: consolePane.cDim; onClicked: Qt.quit() }
                 Label {
                     text: qsTr("e11 Remote Play %1").arg(Qt.application.version)
