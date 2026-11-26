@@ -8,8 +8,8 @@ GTA VI is out on PS5, and there's no Mac version. With e11: Remote Play you can 
 copy on your Mac: stream it from your PS5 at home or away, with a PS5 controller or mouse and
 keyboard (GTA-style keys and mouse aim built in).
 
-- **Sharper picture:** MetalFX upscaling to your Mac's screen
-- **Smoother:** Pro Motion frame generation up to 120 fps on ProMotion displays
+- **Pro Motion frame generation:** 60 fps from the PS5 becomes up to 120 fps on ProMotion displays
+- **MetalFX upscaling:** a sharper picture at your Mac's full screen resolution
 - **Lag guard:** quality steps back the moment it could add lag
 
 You need a PS5, your copy of the game, and a good network connection.
