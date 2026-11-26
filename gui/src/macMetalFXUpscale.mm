@@ -529,14 +529,18 @@ AVFrame *MacMetalFXUpscale::Process(const AVFrame *f)
 		}
 		const auto t0 = std::chrono::steady_clock::now();
 
+		bool done = false;
 		if (g.pso_to_rgb) {
-			// fast path
+			// fast path; if this frame can't be read as Metal textures (e.g. a Clean picture
+			// output buffer), use the VTPixelTransfer path for it instead of giving up
 			CVPixelBufferRef nvf = ProcessFast(src);
 			if (nvf) {
 				result = CopyNV12(nvf);
 				CVPixelBufferRelease(nvf);
+				done = result != nullptr;
 			}
-		} else {
+		}
+		if (!done) {
 		CVPixelBufferRef in = nullptr, out = nullptr, nv = nullptr;
 		CVMetalTextureRef in_holder = nullptr, out_holder = nullptr;
 		bool ok = CVPixelBufferPoolCreatePixelBuffer(nullptr, g.in_pool, &in) == kCVReturnSuccess

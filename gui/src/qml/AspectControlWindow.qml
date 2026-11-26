@@ -405,7 +405,7 @@ Window {
             let c = ceiling;
             // Max: only back off when the Mac is critically hot
             if (prefs.enhanceMode === 2)
-                return Chiaki.window.thermalLevel() >= 3 ? 0 : 3;
+                return Chiaki.window.thermalLevel() >= 3 ? 0 : 2; // Sharp (MetalFX); Clean picture is its own switch
             if (Chiaki.window.onBatteryPower() || Chiaki.window.lowPowerMode())
                 c = Math.min(c, 2);
             const heat = Chiaki.window.thermalLevel();
@@ -870,13 +870,6 @@ Window {
                 tip: qsTr("Picture, graphics, sound, stream")
                 selected: quickWindow.expanded
                 onClicked: { quickWindow.confirmLeave = false; quickWindow.expanded = !quickWindow.expanded; }
-            }
-            Chip {
-                // the full in-game menu (same as the controller's Create + Options)
-                visible: !quickWindow.collapsed
-                text: qsTr("More")
-                tip: qsTr("All in-game options")
-                onClicked: { quickWindow.confirmLeave = false; quickWindow.expanded = false; Chiaki.window.menuRequested(); }
             }
             Chip {
                 Layout.preferredWidth: 64
