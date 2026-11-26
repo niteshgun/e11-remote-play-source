@@ -863,7 +863,8 @@ Window {
                 // Graphics (MetalFX / Neural Engine): click to cycle Off -> Auto -> Max
                 visible: !quickWindow.collapsed && Qt.platform.os === "osx"
                 Layout.preferredWidth: 128
-                text: qsTr("Graphics: %1").arg(enh.modeNames[prefs.enhanceMode])
+                text: prefs.enhanceMode === 0 ? qsTr("Graphics: Off")
+                      : qsTr("Graphics: %1 · MetalFX").arg(enh.modeNames[prefs.enhanceMode])
                 tint: "#ff7ab8"
                 selected: true
                 tip: qsTr("Sharper picture with MetalFX. Click to switch Off / Auto / Max")
@@ -1279,8 +1280,8 @@ Window {
                         color: Qt.rgba(1, 1, 1, 0.6)
                         text: prefs.enhanceMode === 0 ? qsTr("Off: the stream as the PS5 sends it.")
                             : (enh.status !== "" ? enh.status
-                               : (prefs.enhanceMode === 1 ? qsTr("Auto: picks the best picture this Mac can hold, live.")
-                                                          : qsTr("Max: always the strongest this Mac allows.")))
+                               : (prefs.enhanceMode === 1 ? qsTr("Auto: MetalFX upscales 1080p to your screen, steps back to 1080p only when needed, then comes back.")
+                                                          : qsTr("Max: MetalFX upscales 1080p to your screen all the time.")))
                     }
                     // e11: Off / Auto / Max is the only choice on Mac. The separate switches
                     // (Neural Engine, MetalFX, Pro Motion, Clean picture) are run by Auto/Max, never by hand.

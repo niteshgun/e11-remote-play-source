@@ -794,8 +794,8 @@ Pane {
                                 color: consolePane.cDim
                                 font.pixelSize: 12
                                 text: e11prefs.enhanceMode === 0 ? qsTr("Plain picture, exactly as the PS5 sends it.")
-                                     : e11prefs.enhanceMode === 1 ? qsTr("MetalFX sharpening, plus 120 fps Pro Motion on 120 Hz screens. Steps back the moment it could add lag.")
-                                     : qsTr("Sharpest picture this Mac can keep up with, plus 120 fps Pro Motion on 120 Hz screens.")
+                                     : e11prefs.enhanceMode === 1 ? qsTr("Apple MetalFX upscales the 1080p stream to your screen. Steps back only when it must, then comes back. Plus 120 fps Pro Motion on 120 Hz screens.")
+                                     : qsTr("Apple MetalFX upscales the 1080p stream to your screen all the time. Plus 120 fps Pro Motion on 120 Hz screens.")
                             }
                         }
                     }
