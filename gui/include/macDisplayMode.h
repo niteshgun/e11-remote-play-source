@@ -18,6 +18,8 @@ namespace MacDisplayMode {
 	void Restore();
 	// True while e11 has changed a screen's resolution.
 	bool Changed();
+	// True if any connected screen can show HDR (EDR headroom above SDR white).
+	bool AnyScreenHDR();
 }
 
 #endif

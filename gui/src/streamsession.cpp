@@ -19,6 +19,10 @@
 #include <algorithm>
 #include <cmath>
 #include "aiplayrecorder.h"
+#ifdef Q_OS_MACOS
+#include "macDisplayMode.h"
+#include <QSettings>
+#endif
 
 #include <cstring>
 
@@ -500,6 +504,18 @@ StreamSession::StreamSession(const StreamSessionConnectInfo &connect_info, QObje
 	{
 		CHIAKI_LOGW(GetChiakiLog(), "A codec other than H264 was requested for Pi Decoder. Falling back to it.");
 		chiaki_connect_info.video_profile.codec = CHIAKI_CODEC_H264;
+	}
+#endif
+#ifdef Q_OS_MACOS
+	// e11 Graphics Auto/Max: MetalFX upscaling works on normal (SDR) video. If HDR is chosen but no
+	// screen can show HDR (MacBook Air, most monitors), ask the PS5 for normal H265 instead: the HDR
+	// picture would only be squashed back down, and MetalFX could not run on it.
+	if(chiaki_connect_info.video_profile.codec == CHIAKI_CODEC_H265_HDR
+		&& QSettings().value("e11_quick_menu_v2/enhanceMode", 1).toInt() != 0
+		&& !MacDisplayMode::AnyScreenHDR())
+	{
+		CHIAKI_LOGI(GetChiakiLog(), "e11: no HDR screen and Graphics is Auto/Max: streaming H265 (SDR) so MetalFX can upscale");
+		chiaki_connect_info.video_profile.codec = CHIAKI_CODEC_H265;
 	}
 #endif
 	if(connect_info.duid.isEmpty())

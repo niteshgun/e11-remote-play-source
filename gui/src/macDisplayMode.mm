@@ -137,3 +137,13 @@ void MacDisplayMode::Restore()
 }
 
 bool MacDisplayMode::Changed() { return g_changed; }
+
+bool MacDisplayMode::AnyScreenHDR()
+{
+	@autoreleasepool {
+		for (NSScreen *s in [NSScreen screens])
+			if (s.maximumPotentialExtendedDynamicRangeColorComponentValue > 1.0)
+				return true;
+	}
+	return false;
+}
