@@ -872,6 +872,13 @@ Window {
                 onClicked: { quickWindow.confirmLeave = false; quickWindow.expanded = !quickWindow.expanded; }
             }
             Chip {
+                // the full in-game menu (same as the controller's Create + Options)
+                visible: !quickWindow.collapsed
+                text: qsTr("More")
+                tip: qsTr("All in-game options")
+                onClicked: { quickWindow.confirmLeave = false; quickWindow.expanded = false; Chiaki.window.menuRequested(); }
+            }
+            Chip {
                 Layout.preferredWidth: 64
                 text: quickWindow.collapsed ? qsTr("Show") : qsTr("Hide")
                 tip: quickWindow.collapsed ? qsTr("Show the bar") : qsTr("Shrink the bar")
