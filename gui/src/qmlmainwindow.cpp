@@ -3135,10 +3135,13 @@ QVariantMap QmlMainWindow::smoothPlayStatus()
     m["bluetoothOn"] = MacControllerSwitch::BluetoothPowered();
     m["airdropOn"] = MacControllerSwitch::AirDropOn() == 1;
     m["handoffOn"] = MacControllerSwitch::HandoffOn() == 1;
+    // -1 = can't read the setting (App Store sandbox)
+    m["sharingKnown"] = MacControllerSwitch::AirDropOn() != -1 && MacControllerSwitch::HandoffOn() != -1;
 #else
     m["bluetoothOn"] = false;
     m["airdropOn"] = false;
     m["handoffOn"] = false;
+    m["sharingKnown"] = true;
 #endif
     return m;
 }

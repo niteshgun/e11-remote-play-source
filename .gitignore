@@ -39,3 +39,7 @@ chiaki.conf
 .cache/
 *.vscode
 site/
+
+# e11: Mac App Store build output
+/build-appstore/
+/dist-appstore/

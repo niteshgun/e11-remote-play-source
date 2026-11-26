@@ -49,6 +49,10 @@ bool MacControllerSwitch::BluetoothPowered()
 
 int MacControllerSwitch::AirDropOn()
 {
+#ifdef E11_APPSTORE
+	// The App Sandbox can't read other apps' settings: report "unknown".
+	return -1;
+#endif
 	CFPreferencesAppSynchronize(CFSTR("com.apple.sharingd"));
 	CFPropertyListRef v = CFPreferencesCopyAppValue(CFSTR("DiscoverableMode"), CFSTR("com.apple.sharingd"));
 	int on = 1; // macOS default is "Contacts Only"
@@ -62,6 +66,9 @@ int MacControllerSwitch::AirDropOn()
 
 int MacControllerSwitch::HandoffOn()
 {
+#ifdef E11_APPSTORE
+	return -1;
+#endif
 	CFStringRef app = CFSTR("com.apple.coreservices.useractivityd");
 	CFPreferencesSynchronize(app, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost);
 	CFPropertyListRef v = CFPreferencesCopyValue(CFSTR("ActivityAdvertisingAllowed"), app, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost);

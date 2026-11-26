@@ -3182,7 +3182,7 @@ DialogView {
             parent: Overlay.overlay
             x: Math.round((root.width - width) / 2)
             y: Math.round((root.height - height) / 2)
-            title: qsTr("About %1-ng").arg(Qt.application.name)
+            title: qsTr("About e11: Remote Play")
             modal: true
             standardButtons: Dialog.Ok
             Material.roundedScale: Material.MediumScale
@@ -3202,13 +3202,19 @@ DialogView {
                 }
 
                 Label {
+                    // e11: the public source code of this exact app (AGPLv3 requires offering it).
+                    // Replace with your real repo before an App Store build.
+                    readonly property string sourceUrl: "https://github.com/niteshgun/e11-remote-play-source"
                     Layout.preferredWidth: 400
                     verticalAlignment: Text.AlignTop
                     wrapMode: Text.Wrap
+                    textFormat: Text.RichText
+                    onLinkActivated: (link) => Qt.openUrlExternally(link)
                     text: "<h1>e11: Remote Play</h1> by e11, version %1
                         <p>Remote play client for PlayStation®4 and PlayStation®5. Not affiliated with or endorsed by Sony Interactive Entertainment. PlayStation® and PlayStation®5 are trademarks of Sony Group Corporation.</p>
                         <h3>Open-source licences</h3>
-                        <p>Built on open-source remote play code (chiaki-ng by Street Pea; Chiaki by Florian Markl), used under the AGPLv3.</p>
+                        <p>Based on <a href=\"https://github.com/streetpea/chiaki-ng\">chiaki-ng</a> by Street Pea and contributors, and <a href=\"https://git.sr.ht/~thestr4ng3r/chiaki\">Chiaki</a> by Florian Märkl and contributors, used under the GNU AGPLv3.</p>
+                        <p>Source code for this app: <a href=\"%2\">%2</a></p>
 
                         <p>This program is free software: you can redistribute it and/or modify
                         it under the terms of the GNU Affero General Public License version 3
@@ -3217,7 +3223,7 @@ DialogView {
                         <p>This program is distributed in the hope that it will be useful,
                         but WITHOUT ANY WARRANTY; without even the implied warranty of
                         MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-                        GNU General Public License for more details.</p>".arg(Qt.application.version)
+                        GNU Affero General Public License for more details.</p>".arg(Qt.application.version).arg(sourceUrl)
                 }
             }
         }

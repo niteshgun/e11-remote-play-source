@@ -12,6 +12,8 @@ DialogView {
     property var psnurl
     property var expired
     property bool closing: false
+    // e11: true once the sign-in has switched to the user's own browser
+    property bool browserMode: false
     title: {
         if(expired)
             qsTr("Sign in again with PlayStation Network")
@@ -45,11 +47,15 @@ DialogView {
     }
     StackView.onActivated: {
         Chiaki.settings.remotePlayAsk = true;
+        // e11: already switched to the browser (no built-in web view, e.g. App Store build)
+        if(dialog.browserMode)
+            return;
         nativeTokenForm.visible = true;
         nativeTokenForm.forceActiveFocus(Qt.TabFocusReason);
         // e11: on Mac the sign-in opens inside the app and the result is picked up
-        // automatically (no copy/paste). Linux keeps the external browser.
-        if(Qt.platform.os == "linux")
+        // automatically (no copy/paste). Linux, and builds without Qt WebEngine
+        // (Mac App Store), use the user's own browser.
+        if(Qt.platform.os == "linux" || !webView.web)
             extBrowserButton.clicked();
     }
     function close() {
@@ -149,6 +155,7 @@ DialogView {
                         focusPolicy: Qt.NoFocus
                         text: qsTr("Use my browser instead")
                         onClicked: {
+                            dialog.browserMode = true;
                             nativeTokenForm.visible = false;
                             psnTokenToolbar.visible = false;
                             nativeErrorGrid.visible = false;

@@ -277,7 +277,7 @@ Pane {
     QtObject {
         id: controllerCard
         property int tick: 0
-        property var smoothState: ({ bluetoothOn: false, airdropOn: false, handoffOn: false })
+        property var smoothState: ({ bluetoothOn: false, airdropOn: false, handoffOn: false, sharingKnown: true })
         readonly property bool anyWired: {
             tick;
             for (let i = 0; i < Chiaki.controllers.length; i++)
@@ -833,8 +833,8 @@ Pane {
                             spacing: 22
                             Check { ok: controllerCard.anyWired; label: controllerCard.anyWired ? qsTr("USB-C controller") : qsTr("Controller not on USB-C") }
                             Check { visible: Qt.platform.os === "osx"; ok: !controllerCard.smoothState.bluetoothOn; label: controllerCard.smoothState.bluetoothOn ? qsTr("Bluetooth on") : qsTr("Bluetooth off") }
-                            Check { visible: Qt.platform.os === "osx"; ok: !controllerCard.smoothState.airdropOn; label: controllerCard.smoothState.airdropOn ? qsTr("AirDrop on") : qsTr("AirDrop off") }
-                            Check { visible: Qt.platform.os === "osx"; ok: !controllerCard.smoothState.handoffOn; label: controllerCard.smoothState.handoffOn ? qsTr("Handoff on") : qsTr("Handoff off") }
+                            Check { visible: Qt.platform.os === "osx" && controllerCard.smoothState.sharingKnown; ok: !controllerCard.smoothState.airdropOn; label: controllerCard.smoothState.airdropOn ? qsTr("AirDrop on") : qsTr("AirDrop off") }
+                            Check { visible: Qt.platform.os === "osx" && controllerCard.smoothState.sharingKnown; ok: !controllerCard.smoothState.handoffOn; label: controllerCard.smoothState.handoffOn ? qsTr("Handoff on") : qsTr("Handoff off") }
                         }
                     }
                 }
@@ -890,7 +890,7 @@ Pane {
                 model: [
                     { ok: controllerCard.anyWired, t: qsTr("1. Plug the controller into the Mac with USB-C"), d: qsTr("Wired is instant and never jumps to the PS5."), b: "" },
                     { ok: !controllerCard.smoothState.bluetoothOn, t: qsTr("2. Turn Bluetooth off while you play"), d: qsTr("Frees the radio for Wi-Fi. Your USB-C controller keeps working."), b: "bt" },
-                    { ok: !(controllerCard.smoothState.airdropOn || controllerCard.smoothState.handoffOn), t: qsTr("3. Turn off AirDrop and Handoff"), d: qsTr("AirDrop: No One. Handoff: off. They make Wi-Fi hop channels every few seconds, the classic Mac stutter."), b: "ah" },
+                    { ok: controllerCard.smoothState.sharingKnown && !(controllerCard.smoothState.airdropOn || controllerCard.smoothState.handoffOn), t: qsTr("3. Turn off AirDrop and Handoff"), d: qsTr("AirDrop: No One. Handoff: off. They make Wi-Fi hop channels every few seconds, the classic Mac stutter."), b: "ah" },
                     { ok: true, t: qsTr("4. Still lagging? Plug the PS5 into your router with ethernet"), d: qsTr("Then only the Mac is on Wi-Fi. Stay close to the router."), b: "" }
                 ]
                 delegate: RowLayout {

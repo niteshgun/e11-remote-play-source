@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Mac App Store build: App Sandbox on. Keep this list minimal; Apple rejects unused entitlements. -->
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.app-sandbox</key>
+  <true/>
+  <!-- Connect to the console and PSN -->
+  <key>com.apple.security.network.client</key>
+  <true/>
+  <!-- Console discovery replies and Remote Play stream ports -->
+  <key>com.apple.security.network.server</key>
+  <true/>
+  <!-- Mic passthrough -->
+  <key>com.apple.security.device.audio-input</key>
+  <true/>
+  <!-- Bluetooth and USB controllers -->
+  <key>com.apple.security.device.bluetooth</key>
+  <true/>
+  <key>com.apple.security.device.usb</key>
+  <true/>
+  <!-- Screenshots go to Pictures, AI Play recordings to Movies -->
+  <key>com.apple.security.assets.pictures.read-write</key>
+  <true/>
+  <key>com.apple.security.assets.movies.read-write</key>
+  <true/>
+</dict>
+</plist>

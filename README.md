@@ -1,25 +1,30 @@
+# e11: Remote Play
 
-![chiaki-ng Logo](gui/res/chiaking-logo.svg)
+Play your PS5 or PS4 on your Mac, at home or away, with a controller.
 
-# [chiaki-ng](https://chiaki-ng.github.io/chiaki-ng/)
+- Metal and MetalFX upscaling, Neural Engine upscaling and Pro Motion frame generation
+- Colour grades, including the "Game" look
+- 1080p streaming by default
+- Simple setup for linking a console and signing in to PSN
+- Screenshots, mouse aim and Mac controller fixes
 
-An open source PlayStation remote play project serving as the next-generation of Chiaki with improvements and ongoing support now that the original Chiaki project is in maintenance mode only. [Click here to see the accompanying site for documentation, updates and more](https://chiaki-ng.github.io/chiaki-ng/).
+Get the app on the Mac App Store. This repository is the source code.
 
-## Discord
-[chiaki-ng community Discord](https://discord.gg/tAMbRuwXDH)
+## Building
 
-## Official downloads
-Only download chiaki-ng from these sources:
+CMake + Ninja, Qt 6, FFmpeg, OpenSSL 3, SDL and libplacebo.
 
-- [GitHub Releases](https://github.com/chiaki-ng/chiaki-ng/releases)
-- [Flathub](https://flathub.org/apps/io.github.streetpea.Chiaki4deck)
-- winget: `winget install --id=StreetPea.chiaki-ng -e`
-- Homebrew: `brew install --cask streetpea/streetpea/chiaki-ng`
+Mac App Store build:
 
-Other websites offering chiaki-ng downloads, such as chiaki-ng.com, are not run by this project, and we can't vouch for the files they serve.
+```
+TEAM_ID=ABCDE12345 PROFILE=path/to/profile.provisionprofile BUILD_NUMBER=1 \
+  scripts/macos/build-appstore.sh
+```
 
-## Disclaimer
-This project is not endorsed or certified by Sony Interactive Entertainment LLC.
+## License and credits
 
-Chiaki is a Free and Open Source Software Client for PlayStation 4 and PlayStation 5 Remote Play
-for Linux, FreeBSD, OpenBSD, Android, macOS, Windows, Nintendo Switch and potentially even more platforms.
+GNU Affero General Public License v3 with the OpenSSL exception; see [COPYING](COPYING) and
+[LICENSES/](LICENSES). Includes code from Chiaki and chiaki-ng (see [README-chiaki-ng.md](README-chiaki-ng.md)).
+
+Not endorsed or certified by Sony Interactive Entertainment. PlayStation, PS4, PS5 and DualSense
+are trademarks of Sony Interactive Entertainment Inc.
