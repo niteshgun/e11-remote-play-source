@@ -17,7 +17,7 @@ DialogView {
     property int selectedConsole: SettingsDialog.Console.PS5
     property bool quitControllerMapping: true
     id: dialog
-    title: qsTr("All settings")
+    title: qsTr("Settings")
     header: ""
     buttonVisible: false
     function flickContainsItem(flick, item) {
@@ -1357,10 +1357,11 @@ DialogView {
                     C.ComboBox {
                         id: resolutionLocalPS5
                         Layout.preferredWidth: 400
-                        model: [qsTr("360p"), qsTr("540p"), qsTr("720p"), qsTr("1080p (Default)")]
-                        currentIndex: Chiaki.settings.resolutionLocalPS5 - 1
+                        // e11: PS5 always streams 1080p HD (MetalFX takes it to 1440p QHD); no 360p-720p
+                        model: [qsTr("1080p HD")]
+                        currentIndex: 0
                         onActivated: (index) => {
-                            Chiaki.settings.resolutionLocalPS5 = index + 1
+                            Chiaki.settings.resolutionLocalPS5 = 4
                             Chiaki.settings.bitrateLocalPS5 = 0
                         }
                         visible: selectedConsole == SettingsDialog.Console.PS5
@@ -1378,10 +1379,11 @@ DialogView {
                     C.ComboBox {
                         id: resolutionRemotePS5
                         Layout.preferredWidth: 400
-                        model: [qsTr("360p"), qsTr("540p"), qsTr("720p (Default)"), qsTr("1080p")]
-                        currentIndex: Chiaki.settings.resolutionRemotePS5 - 1
+                        // e11: PS5 always streams 1080p HD (MetalFX takes it to 1440p QHD); no 360p-720p
+                        model: [qsTr("1080p HD")]
+                        currentIndex: 0
                         onActivated: (index) => {
-                            Chiaki.settings.resolutionRemotePS5 = index + 1
+                            Chiaki.settings.resolutionRemotePS5 = 4
                             Chiaki.settings.bitrateRemotePS5 = 0
                         }
                         visible: selectedConsole == SettingsDialog.Console.PS5

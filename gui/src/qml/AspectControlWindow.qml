@@ -70,8 +70,22 @@ Window {
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
     color: "transparent"
     modality: Qt.NonModal
-    width: Math.max(pill.implicitWidth, (expanded && !confirmLeave) ? 760 : 0)
-    height: pill.implicitHeight + (confirmLeave ? leaveCard.implicitHeight + 8 : (expanded ? card.implicitHeight + 8 : 0))
+    // Settings open = full screen over the game (same look as Settings on Home)
+    readonly property bool full: expanded && !confirmLeave && !!hostWindow
+    width: full ? hostWindow.width : Math.max(pill.implicitWidth, (expanded && !confirmLeave) ? 760 : 0)
+    height: full ? hostWindow.height : pill.implicitHeight + (confirmLeave ? leaveCard.implicitHeight + 8 : (expanded ? card.implicitHeight + 8 : 0))
+    property real barX: 0
+    property real barY: 0
+    onFullChanged: {
+        adjusting = true;
+        if (full) {
+            barX = x; barY = y;
+            x = hostWindow.x; y = hostWindow.y;
+        } else {
+            x = barX; y = barY;
+        }
+        adjusting = false;
+    }
 
     Material.theme: Material.Dark
     Material.accent: "#5aa9ff"
@@ -115,7 +129,7 @@ Window {
     property real rightX: -1
     property bool adjusting: false
     function keepOnScreen() {
-        if (!visible)
+        if (!visible || full || adjusting)
             return;
         if (rightX < 0)
             rightX = x + width;
@@ -192,8 +206,8 @@ Window {
         }
     }
     // The system drag (startSystemMove) owns the mouse, so save on every position change
-    onXChanged: if (visible) { prefs.posX = x; if (!adjusting) rightX = x + width; }
-    onYChanged: if (visible) prefs.posY = y
+    onXChanged: if (visible && !full && !adjusting) { prefs.posX = x; rightX = x + width; }
+    onYChanged: if (visible && !full && !adjusting) prefs.posY = y
     onCollapsedChanged: {
         prefs.collapsed = collapsed;
         if (collapsed) {
@@ -750,9 +764,20 @@ Window {
         font.letterSpacing: -0.4
     }
 
+    // dims the game behind full-screen Settings
+    Rectangle {
+        anchors.fill: parent
+        visible: quickWindow.full
+        color: "#e607090c"
+        MouseArea { anchors.fill: parent }
+    }
+
     Rectangle {
         id: pill
         anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.leftMargin: quickWindow.full ? 24 : 0
+        anchors.topMargin: quickWindow.full ? 18 : 0
         width: implicitWidth
         // Minimised: just the e11 logo in a small, see-through circle (click = show the bar)
         implicitWidth: quickWindow.collapsed ? 44 : row.implicitWidth + 20
@@ -951,12 +976,12 @@ Window {
 
     // Expanded quick menu: tabs on the left, one page at a time (DeskCleaner colours)
     readonly property var tabDefs: [
-        { name: qsTr("Picture"), color: "#5aa9ff" },
-        { name: qsTr("MetalFX"), color: "#ff7ab8" },
-        { name: qsTr("Sound"), color: "#f2c94c" },
-        { name: qsTr("Stream"), color: "#b79bff" },
-        { name: qsTr("Controller"), color: "#5fd3a6" },
-        { name: qsTr("Display"), color: "#8c97a6" }
+        { name: qsTr("Picture"), color: "#5aa9ff", hint: qsTr("Colour grade, brightness, sharpen") },
+        { name: qsTr("MetalFX"), color: "#ff7ab8", hint: qsTr("1080p HD to 1440p QHD") },
+        { name: qsTr("Sound"), color: "#f2c94c", hint: qsTr("Mac + TV, speaker") },
+        { name: qsTr("Stream"), color: "#b79bff", hint: qsTr("Bitrate, performance, V-Sync") },
+        { name: qsTr("Controller"), color: "#5fd3a6", hint: qsTr("Connection, doubled inputs") },
+        { name: qsTr("Display"), color: "#8c97a6", hint: qsTr("Mac resolution, stats") }
     ]
     property bool confirmLeave: false
     Rectangle {
@@ -997,11 +1022,12 @@ Window {
         id: card
         visible: quickWindow.expanded && !quickWindow.confirmLeave
         anchors.top: pill.bottom
-        anchors.topMargin: 8
+        anchors.topMargin: quickWindow.full ? 14 : 8
         anchors.left: parent.left
-        width: Math.max(pill.width, 760)
+        anchors.leftMargin: quickWindow.full ? 24 : 0
+        width: quickWindow.full ? parent.width - 48 : Math.max(pill.width, 760)
         implicitHeight: 470
-        height: implicitHeight
+        height: quickWindow.full ? parent.height - pill.height - 18 - 14 - 24 : implicitHeight
         radius: 18
         color: "#f50b0e13"
         border.color: "#1e2530"
@@ -1012,8 +1038,8 @@ Window {
             anchors.margins: 1
             spacing: 0
             ColumnLayout {
-                Layout.preferredWidth: 170
-                Layout.maximumWidth: 170
+                Layout.preferredWidth: quickWindow.full ? 250 : 170
+                Layout.maximumWidth: quickWindow.full ? 250 : 170
                 Layout.fillWidth: false
                 Layout.fillHeight: true
                 Layout.margins: 12
@@ -1035,8 +1061,8 @@ Window {
                         required property int index
                         readonly property bool on: prefs.menuTab === index
                         Layout.fillWidth: true
-                        implicitHeight: 38
-                        radius: 10
+                        implicitHeight: quickWindow.full ? 58 : 38
+                        radius: 12
                         color: "transparent"
                         border.width: 1.5
                         border.color: on ? modelData.color : (tabHover.containsMouse ? "#1e2530" : "transparent")
@@ -1045,7 +1071,12 @@ Window {
                             anchors.leftMargin: 12
                             spacing: 10
                             Rectangle { width: 11; height: 11; radius: 5.5; color: "transparent"; border.width: 2; border.color: modelData.color }
-                            Label { text: modelData.name; color: on ? "#eef2f7" : "#b3bdc9"; font.pixelSize: 14; font.weight: on ? Font.DemiBold : Font.Normal; Layout.fillWidth: true }
+                            ColumnLayout {
+                                spacing: 2
+                                Layout.fillWidth: true
+                                Label { text: modelData.name; color: on ? "#eef2f7" : "#b3bdc9"; font.pixelSize: quickWindow.full ? 15 : 14; font.weight: on ? Font.DemiBold : Font.Normal }
+                                Label { visible: quickWindow.full; text: modelData.hint; color: "#8c97a6"; font.pixelSize: 11; elide: Text.ElideRight; Layout.fillWidth: true }
+                            }
                         }
                         MouseArea { id: tabHover; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: prefs.menuTab = index }
                     }

@@ -390,7 +390,7 @@ Pane {
                 }
                 NavItem { text: qsTr("Smooth play"); tint: consolePane.cLemon; onClicked: smoothPopup.open() }
                 // e11: every setting (video, stream, audio, keys, controllers...) in one clear place
-                NavItem { id: settingsButton; text: qsTr("All settings"); tint: consolePane.cLilac; onClicked: root.showSettingsDialog() }
+                NavItem { id: settingsButton; text: qsTr("Settings"); tint: consolePane.cLilac; onClicked: root.showSettingsDialog() }
                 NavItem {
                     text: qsTr("Steam shortcut"); tint: consolePane.cSky
                     visible: typeof Chiaki.createSteamShortcut === "function" && Qt.platform.os !== "osx"
