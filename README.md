@@ -2,6 +2,20 @@
 
 Play your PS5 or PS4 on your Mac, at home or away, with a controller.
 
+## Play GTA VI on your Mac
+
+GTA VI is out on PS5, and there's no Mac version. With e11: Remote Play you can play your own
+copy on your Mac: stream it from your PS5 at home or away, with a PS5 controller or mouse and
+keyboard (GTA-style keys and mouse aim built in).
+
+- **Sharper picture:** MetalFX upscaling to your Mac's screen
+- **Smoother:** Pro Motion frame generation up to 120 fps on ProMotion displays
+- **Lag guard:** quality steps back the moment it could add lag
+
+You need a PS5, your copy of the game, and a good network connection.
+
+## Features
+
 - Metal and MetalFX upscaling, Neural Engine upscaling and Pro Motion frame generation
 - Colour grades, including the "Game" look
 - 1080p streaming by default
@@ -26,5 +40,7 @@ TEAM_ID=ABCDE12345 PROFILE=path/to/profile.provisionprofile BUILD_NUMBER=1 \
 GNU Affero General Public License v3 with the OpenSSL exception; see [COPYING](COPYING) and
 [LICENSES/](LICENSES). Includes code from Chiaki and chiaki-ng (see [README-chiaki-ng.md](README-chiaki-ng.md)).
 
-Not endorsed or certified by Sony Interactive Entertainment. PlayStation, PS4, PS5 and DualSense
-are trademarks of Sony Interactive Entertainment Inc.
+Not endorsed or certified by Sony Interactive Entertainment, Rockstar Games or Take-Two Interactive.
+PlayStation, PS4, PS5 and DualSense are trademarks of Sony Interactive Entertainment Inc.
+Grand Theft Auto and GTA are trademarks of Take-Two Interactive Software, Inc.
+e11: Remote Play does not include any games.
