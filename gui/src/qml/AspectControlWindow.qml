@@ -96,7 +96,33 @@ Window {
             x = hostWindow.x + hostWindow.width - pill.implicitWidth - 24;
             y = hostWindow.y + 48;
         }
+        rightX = x + width;
+        keepOnScreen();
     }
+
+    // The bar grows and shrinks (Show/Hide, menu open). Keep its right edge where it was,
+    // so it grows to the left, and never let any part go past the screen edge.
+    property real rightX: -1
+    property bool adjusting: false
+    function keepOnScreen() {
+        if (!visible)
+            return;
+        if (rightX < 0)
+            rightX = x + width;
+        let nx = rightX - width;
+        let ny = y;
+        const s = quickWindow.screen;
+        if (s) {
+            nx = Math.max(s.virtualX + 8, Math.min(nx, s.virtualX + s.width - width - 8));
+            ny = Math.max(s.virtualY + 8, Math.min(ny, s.virtualY + s.height - height - 8));
+        }
+        adjusting = true;
+        if (nx !== x) x = nx;
+        if (ny !== y) y = ny;
+        adjusting = false;
+    }
+    onWidthChanged: keepOnScreen()
+    onHeightChanged: keepOnScreen()
 
     onVisibleChanged: {
         if (visible) {
@@ -121,7 +147,7 @@ Window {
         }
     }
     // The system drag (startSystemMove) owns the mouse, so save on every position change
-    onXChanged: if (visible) prefs.posX = x
+    onXChanged: if (visible) { prefs.posX = x; if (!adjusting) rightX = x + width; }
     onYChanged: if (visible) prefs.posY = y
     onCollapsedChanged: {
         prefs.collapsed = collapsed;
