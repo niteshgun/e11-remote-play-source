@@ -269,7 +269,7 @@ Window {
     // bitrate by itself from the packet-loss reports we send every 200 ms.
     function applyBitratePolicy() {
         if (prefs.autoBitrate) {
-            Chiaki.settings.bitrateLocalPS5 = 20000; // Wi-Fi safe; the PS5 still adapts down by itself
+            Chiaki.settings.bitrateLocalPS5 = 30000; // ceiling at home; the PS5 adapts down by itself from loss reports
             Chiaki.settings.bitrateRemotePS5 = 0; // internet: resolution default (15 Mbps at 1080p)
         } else {
             Chiaki.settings.bitrateLocalPS5 = prefs.manualBitrateMbps * 1000;
@@ -466,11 +466,16 @@ Window {
                 Chiaki.settings.proMotion = false;
             enh.sinceUp++;
             const dropped = Math.max(0, Chiaki.window.droppedFrames - Chiaki.window.proMotionSurplus());
-            if (dropped >= 3) {
+            // Only blame the Mac's picture work for dropped frames when the network is clean and the
+            // upscaler is actually taking time: Wi-Fi loss (Bluetooth sharing the radio etc.) drops
+            // frames too, and turning MetalFX off doesn't fix that.
+            const netLoss = Chiaki.session && isFinite(Chiaki.session.averagePacketLoss) ? Chiaki.session.averagePacketLoss : 0;
+            const macsFault = netLoss < 0.002 && (enh.tier < 2 || Chiaki.window.metalFXP95Ms() > 5.0);
+            if (dropped >= 3 && macsFault) {
                 enh.bad++;
                 enh.good = 0;
                 enh.cleanStreak = 0;
-            } else {
+            } else if (dropped < 3) {
                 enh.good++;
                 enh.bad = 0;
                 enh.cleanStreak++;
@@ -490,8 +495,8 @@ Window {
                     return;
                 }
             }
-            // Zero-lag budget: the upscaler may add at most ~4 ms (95th percentile)
-            if (enh.tier >= 2 && Chiaki.window.metalFXP95Ms() > 4.0) {
+            // Lag budget: the upscaler may add at most ~6 ms (95th percentile) of a 16.7 ms frame
+            if (enh.tier >= 2 && Chiaki.window.metalFXP95Ms() > 6.0) {
                 if (++enh.slowSeconds >= 3) {
                     enh.slowSeconds = 0;
                     enh.ceiling = Math.min(enh.ceiling, enh.tier - 1);
