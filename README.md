@@ -1,5 +1,7 @@
 # e11: Remote Play
 
+*Made by e11hours AI Studio, vibe-coded by Claude.*
+
 Play your PS5 or PS4 on your Mac, at home or away, with a controller.
 
 ## Play GTA VI on your Mac
