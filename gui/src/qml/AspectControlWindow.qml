@@ -504,7 +504,9 @@ Window {
                 enh.bad = 0;
                 enh.cleanStreak++;
             }
-            if (enh.cleanStreak >= 120 && enh.ceiling < 3) {
+            // Auto may drop to 1080p when the Mac/network struggles, but comes back: 30 clean seconds
+            // lift the learned limit again (was 120 s, so it looked stuck at 1080p)
+            if (enh.cleanStreak >= 30 && enh.ceiling < 3) {
                 enh.ceiling++;
                 enh.cleanStreak = 0;
             }
@@ -525,7 +527,6 @@ Window {
             if (prefs.enhanceMode === 1 && enh.tier >= 2 && Chiaki.window.metalFXP95Ms() > 12.0) {
                 if (++enh.slowSeconds >= 3) {
                     enh.slowSeconds = 0;
-                    enh.ceiling = Math.min(enh.ceiling, enh.tier - 1);
                     enh.sinceUp = 999;
                     enh.apply(enh.tier - 1);
                     enh.status = qsTr("%1: %2 (kept lag-free)").arg(enh.modeNames[prefs.enhanceMode]).arg(enh.names[enh.tier]);
@@ -563,7 +564,7 @@ Window {
                 enh.status = qsTr("Auto: %1 (lowered to stay smooth)").arg(enh.names[enh.tier]);
                 return;
             }
-            if (enh.good >= 20 && enh.tier < c) {
+            if (enh.good >= 10 && enh.tier < c) {
                 enh.sinceUp = 0;
                 enh.apply(enh.tier + 1);
                 enh.status = qsTr("Auto: trying %1…").arg(enh.names[enh.tier]);
