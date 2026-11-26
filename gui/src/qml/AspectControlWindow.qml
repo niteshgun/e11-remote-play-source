@@ -834,7 +834,7 @@ Window {
                         color: "#eef2f7"
                         elide: Text.ElideNone
                     }
-                    StatCell { width: 70; text: quickWindow.sRes; color: "#eef2f7" }
+                    StatCell { width: 96; text: quickWindow.sRes; color: quickWindow.sRes.indexOf("QHD") >= 0 ? "#5fd3a6" : "#eef2f7" }
                     Rectangle { width: 1; height: 34; color: "#1e2530" }
                     StatCell { width: 80; text: quickWindow.sFps + " fps"; color: quickWindow.sShown >= 55 || quickWindow.fps === 0 ? "#5fd3a6" : "#f2c94c" }
                     Rectangle { width: 1; height: 34; color: "#1e2530" }
@@ -1280,8 +1280,8 @@ Window {
                         color: Qt.rgba(1, 1, 1, 0.6)
                         text: prefs.enhanceMode === 0 ? qsTr("Off: the stream as the PS5 sends it.")
                             : (enh.status !== "" ? enh.status
-                               : (prefs.enhanceMode === 1 ? qsTr("Auto: MetalFX upscales 1080p to your screen, steps back to 1080p only when needed, then comes back.")
-                                                          : qsTr("Max: MetalFX upscales 1080p to your screen all the time.")))
+                               : (prefs.enhanceMode === 1 ? qsTr("Auto: the PS5 sends 1080p HD, MetalFX makes it 1440p QHD. Steps back to 1080p only when needed, then comes back.")
+                                                          : qsTr("Max: the PS5 sends 1080p HD, MetalFX makes it 1440p QHD, all the time.")))
                     }
                     // e11: Off / Auto / Max is the only choice on Mac. The separate switches
                     // (Neural Engine, MetalFX, Pro Motion, Clean picture) are run by Auto/Max, never by hand.

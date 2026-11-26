@@ -2962,8 +2962,14 @@ static QString e11ResolutionLabel(int w, int h)
 {
     if (w <= 0 || h <= 0)
         return QString();
+    if (w >= 2560 && w < 3840)
+        return QStringLiteral("1440p QHD");
     switch (h) {
-    case 720: case 1080: case 1440:
+    case 1080:
+        if (w == 1920)
+            return QStringLiteral("1080p HD");
+        break;
+    case 720: case 1440:
         if (w == h * 16 / 9)
             return QString("%1p").arg(h);
         break;
@@ -8477,7 +8483,9 @@ QString QmlMainWindow::streamResolution() const
     if (w <= 0 || h <= 0)
         return QString();
     // Decoders can pad the height (1088 for 1080p); name the standard sizes, show anything else as-is
-    if (w == 1920 && (h == 1080 || h == 1088)) return QStringLiteral("1080p");
+    // e11 names: MetalFX output 2560 wide = "1440p QHD", the PS5's 1080p = "1080p HD"
+    if (w >= 2560 && w < 3840) return QStringLiteral("1440p QHD");
+    if (w == 1920 && (h == 1080 || h == 1088)) return QStringLiteral("1080p HD");
     if (w == 1280 && h == 720) return QStringLiteral("720p");
     if (w == 960 && (h == 540 || h == 544)) return QStringLiteral("540p");
     if (w == 640 && h == 360) return QStringLiteral("360p");
