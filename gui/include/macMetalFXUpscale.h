@@ -31,6 +31,23 @@ namespace MacMetalFXUpscale {
 	void SetTargetSize(int width, int height);
 	// 95th percentile processing time over the last ~2 s (0 if inactive).
 	double P95Ms();
+	// e11: why MetalFX is or isn't upscaling right now (for the Graphics line).
+	enum Reason {
+		WaitingForFrames = 0,
+		Upscaling,
+		NotSupported,
+		SwitchedOff,
+		SoftwareDecoding,   // frames aren't hardware (VideoToolbox) frames
+		HdrStream,          // 10-bit HDR: MetalFX path is 8-bit SDR only
+		StreamAlreadyLarge, // stream is above 1440p
+		WindowNotBigger,    // window/screen isn't at least 1.1x the stream
+		TooSlow,            // switched itself off for this stream
+		StartFailed         // MetalFX couldn't start for this stream
+	};
+	int CurrentReason();
+	// Size of the stream going in (0 if none yet).
+	int InputWidth();
+	int InputHeight();
 }
 
 // e11 Enhance: system state used by the Auto policy.

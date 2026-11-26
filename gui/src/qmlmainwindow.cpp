@@ -2482,7 +2482,7 @@ static const struct pl_hook *select_spatial_hook(QmlMainWindow::VideoPreset pres
 
     switch (preset) {
     case QmlMainWindow::VideoPreset::HighQualitySpatial:
-        return upscale_factor >= spatial_upscale_threshold ? hook8 : fsr_hook;
+        return fsr_hook; // e11 FSR: always AMD FSR (light, sharp); Ultra uses the neural FSRCNNX
     case QmlMainWindow::VideoPreset::HighQualityAdvancedSpatial:
         return upscale_factor >= spatial_upscale_threshold ? hook16 : fsr_hook;
     case QmlMainWindow::VideoPreset::Custom:
@@ -2922,19 +2922,53 @@ int QmlMainWindow::thermalLevel() const
 #endif
 }
 
+// e11: "1080p", "1440p", "4K" for standard sizes, otherwise "2496×1404"
+static QString e11ResolutionLabel(int w, int h)
+{
+    if (w <= 0 || h <= 0)
+        return QString();
+    switch (h) {
+    case 720: case 1080: case 1440:
+        if (w == h * 16 / 9)
+            return QString("%1p").arg(h);
+        break;
+    case 2160:
+        if (w == 3840)
+            return QStringLiteral("4K");
+        break;
+    }
+    return QString("%1×%2").arg(w).arg(h);
+}
+
 QString QmlMainWindow::metalFXStatus() const
 {
 #ifdef Q_OS_MACOS
     if (!MacMetalFXUpscale::Available())
-        return tr("Not supported on this Mac");
+        return tr("MetalFX: not supported on this Mac");
     if (!MacMetalFXUpscale::Enabled())
-        return tr("Off");
+        return tr("MetalFX off");
+    const QString in = e11ResolutionLabel(MacMetalFXUpscale::InputWidth(), MacMetalFXUpscale::InputHeight());
     if (MacMetalFXUpscale::Active())
-        return tr("On: %1×%2, %3 ms/frame (GPU)").arg(MacMetalFXUpscale::OutputWidth()).arg(MacMetalFXUpscale::OutputHeight())
-            .arg(MacMetalFXUpscale::LastProcessMs(), 0, 'f', 1);
-    if (session)
-        return tr("On (waiting for frames, or switched itself off because it was too slow)");
-    return tr("On: starts with the stream");
+        return tr("MetalFX on: %1 → %2")
+            .arg(in, e11ResolutionLabel(MacMetalFXUpscale::OutputWidth(), MacMetalFXUpscale::OutputHeight()));
+    if (!session)
+        return tr("MetalFX: starts with the stream");
+    switch (MacMetalFXUpscale::CurrentReason()) {
+    case MacMetalFXUpscale::HdrStream:
+        return tr("MetalFX off: HDR stream (works with SDR)");
+    case MacMetalFXUpscale::SoftwareDecoding:
+        return tr("MetalFX off: needs hardware decoding");
+    case MacMetalFXUpscale::StreamAlreadyLarge:
+        return tr("MetalFX off: stream is already %1").arg(in);
+    case MacMetalFXUpscale::WindowNotBigger:
+        return tr("MetalFX off: window isn't bigger than the %1 stream (go full screen)").arg(in);
+    case MacMetalFXUpscale::TooSlow:
+        return tr("MetalFX off: too slow on this Mac for this stream");
+    case MacMetalFXUpscale::StartFailed:
+        return tr("MetalFX off: couldn't start for this stream");
+    default:
+        return tr("MetalFX: waiting for the stream");
+    }
 #else
     return tr("Mac only");
 #endif

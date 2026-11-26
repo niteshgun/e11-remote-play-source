@@ -35,6 +35,16 @@ static std::atomic<double> g_last_ms{0.0};
 static std::atomic<int> g_out_w{0}, g_out_h{0};
 static std::atomic<int> g_target_w{0}, g_target_h{0};
 static std::atomic<double> g_p95_ms{0.0};
+static std::atomic<int> g_reason{MacMetalFXUpscale::WaitingForFrames};
+static std::atomic<int> g_in_w{0}, g_in_h{0};
+
+// e11: remember why this frame was or wasn't upscaled; anything but Upscaling means not active
+static void SetReason(int r)
+{
+	g_reason = r;
+	if (r != MacMetalFXUpscale::Upscaling)
+		g_active = 0;
+}
 
 namespace {
 
@@ -238,6 +248,9 @@ void MacMetalFXUpscale::SetTargetSize(int width, int height)
 }
 
 double MacMetalFXUpscale::P95Ms() { return Active() ? g_p95_ms.load() : 0.0; }
+int MacMetalFXUpscale::CurrentReason() { return g_reason.load(); }
+int MacMetalFXUpscale::InputWidth() { return g_in_w; }
+int MacMetalFXUpscale::InputHeight() { return g_in_h; }
 
 bool MacSystemState::OnBattery()
 {
@@ -269,6 +282,9 @@ int MacSystemState::ThermalLevel()
 void MacMetalFXUpscale::Reset()
 {
 	g_failed = false;
+	g_reason = WaitingForFrames;
+	g_in_w = 0;
+	g_in_h = 0;
 	g_reset_requested = true;
 }
 
@@ -276,26 +292,43 @@ AVFrame *MacMetalFXUpscale::Process(const AVFrame *f)
 {
 	if (g_reset_requested.exchange(false) || (!g_enabled && g.scaler) || (g_failed && g.scaler))
 		Teardown();
-	if (!g_enabled || g_failed || !Available())
+	if (!Available()) {
+		SetReason(NotSupported);
 		return nullptr;
-	if (!f || f->format != AV_PIX_FMT_VIDEOTOOLBOX || !f->data[3])
+	}
+	if (!g_enabled) {
+		SetReason(SwitchedOff);
 		return nullptr;
+	}
+	if (g_failed) // reason (TooSlow / StartFailed) was set when it switched off
+		return nullptr;
+	if (!f || f->format != AV_PIX_FMT_VIDEOTOOLBOX || !f->data[3]) {
+		SetReason(SoftwareDecoding);
+		return nullptr;
+	}
 	if (f->hw_frames_ctx) {
 		const AVHWFramesContext *fc = (const AVHWFramesContext *)f->hw_frames_ctx->data;
-		if (fc->sw_format != AV_PIX_FMT_NV12)
+		if (fc->sw_format != AV_PIX_FMT_NV12) {
+			SetReason(HdrStream);
 			return nullptr; // 8-bit SDR only
+		}
 	}
 
 	CVPixelBufferRef src = (CVPixelBufferRef)f->data[3];
 	const int w = (int)CVPixelBufferGetWidth(src);
 	const int h = (int)CVPixelBufferGetHeight(src);
-	// already at or above 4K: nothing to gain
-	if (w <= 0 || h <= 0 || w > 2560 || h > 1440)
+	g_in_w = w;
+	g_in_h = h;
+	// already above 1440p: nothing to gain
+	if (w <= 0 || h <= 0 || w > 2560 || h > 1440) {
+		SetReason(StreamAlreadyLarge);
 		return nullptr;
+	}
 	int want_w = 0, want_h = 0;
 	if (!OutputSizeFor(w, h, want_w, want_h)) {
 		if (g.scaler)
 			Teardown();
+		SetReason(WindowNotBigger);
 		return nullptr;
 	}
 
@@ -306,6 +339,7 @@ AVFrame *MacMetalFXUpscale::Process(const AVFrame *f)
 				NSLog(@"[e11] MetalFX: not available for this stream, switching it off");
 				Teardown();
 				g_failed = true;
+				SetReason(StartFailed);
 				return nullptr;
 			}
 		}
@@ -348,6 +382,7 @@ AVFrame *MacMetalFXUpscale::Process(const AVFrame *f)
 		if (!result) {
 			NSLog(@"[e11] MetalFX: processing failed, switching it off");
 			g_failed = true;
+			SetReason(StartFailed);
 			return nullptr;
 		}
 		av_frame_copy_props(result, f);
@@ -376,8 +411,11 @@ AVFrame *MacMetalFXUpscale::Process(const AVFrame *f)
 			NSLog(@"[e11] MetalFX: too slow on this Mac (avg %.1f ms, p95 %.1f ms), switching it off for this stream",
 				g.avg_ms, g_p95_ms.load());
 			g_failed = true;
+			SetReason(TooSlow);
+		} else {
+			g_reason = Upscaling;
+			g_active = 1;
 		}
-		g_active = 1;
 	}
 	return result;
 }

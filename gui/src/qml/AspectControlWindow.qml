@@ -268,8 +268,8 @@ Window {
 
     // ---------- performance ----------
     // Render quality levels map to ChiakiWindow.VideoPreset:
-    // 0 Fast, 1 Default, 2 High Quality, 3 HQ + FSR sharpening, 4 HQ + neural (FSRCNNX) upscaling
-    readonly property var qualityNames: [qsTr("Fast"), qsTr("Balanced"), qsTr("High"), qsTr("Sharp"), qsTr("Ultra")]
+    // 0 Fast, 1 Default, 2 High Quality, 3 e11 FSR (HQ + AMD FSR, the default), 4 HQ + neural (FSRCNNX) upscaling
+    readonly property var qualityNames: [qsTr("Fast"), qsTr("Balanced"), qsTr("High"), qsTr("e11 FSR"), qsTr("Ultra")]
     readonly property var qualityPresets: [ChiakiWindow.VideoPreset.Fast, ChiakiWindow.VideoPreset.Default,
         ChiakiWindow.VideoPreset.HighQuality, ChiakiWindow.VideoPreset.HighQualitySpatial,
         ChiakiWindow.VideoPreset.HighQualityAdvancedSpatial]
@@ -277,7 +277,7 @@ Window {
 
     // Best level this Mac should handle comfortably at 1080p60
     function chipMaxLevel() {
-        return 1; // smoothness first: auto starts at "Balanced" and drops to "Fast" if frames drop
+        return 3; // e11 FSR by default (light AMD FSR sharpening); Auto still steps down the moment frames drop
         let c = chip.toUpperCase();
         if (/M[3-9]/.test(c) || c.indexOf("PRO") >= 0 || c.indexOf("MAX") >= 0 || c.indexOf("ULTRA") >= 0)
             return 4; // newer / bigger GPUs: neural upscaling
@@ -349,8 +349,8 @@ Window {
             return c;
         }
         function detail() {
-            if (tier >= 2 && Chiaki.window.metalFXActive())
-                return " · " + Chiaki.window.metalFXStatus().replace(qsTr("On: "), "");
+            if (tier >= 2) // Sharp tiers use MetalFX: show it working, or why not
+                return " · " + Chiaki.window.metalFXStatus(); // "MetalFX on: 1080p → 1440p" or why it is off
             return "";
         }
         property int slowSeconds: 0
@@ -414,8 +414,8 @@ Window {
                 if (enh.metalWait >= 6) {
                     enh.ceiling = Math.min(enh.ceiling, 1);
                     enh.apply(Math.min(enh.tier === 3 ? 1 : 0, enh.cap()));
-                    enh.status = qsTr("%1: %2 (Sharp not needed or not available at this window size)")
-                        .arg(enh.modeNames[prefs.enhanceMode]).arg(enh.names[enh.tier]);
+                    enh.status = qsTr("%1: %2 · %3")
+                        .arg(enh.modeNames[prefs.enhanceMode]).arg(enh.names[enh.tier]).arg(Chiaki.window.metalFXStatus());
                     return;
                 }
             }
@@ -1354,7 +1354,7 @@ Window {
                                                         text: modelData
                                                         selected: quickWindow.currentLevel() === index
                                                         tip: [qsTr("Lowest GPU use"), qsTr("Good quality, light"), qsTr("High quality scaling"),
-                                                              qsTr("High quality + FSR sharpening for Retina"),
+                                                              qsTr("e11 FSR: sharp, light upscaling (default)"),
                                                               qsTr("High quality + neural upscaling (FSRCNNX on the GPU)")][index]
                                                         onClicked: {
                                                             prefs.autoPerformance2 = false;
